@@ -1,0 +1,903 @@
+<template>
+  <div class="watchlist-container">
+    <!-- 功能控制栏 -->
+    <el-card shadow="never" class="action-bar-card" style="margin-bottom: 20px;">
+      <el-row :gutter="20" align="middle" justify="space-between">
+        <el-col :span="10">
+          <el-input
+            v-model="searchQuery"
+            placeholder="搜索股票代码或名称..."
+            clearable
+            style="width: 200px; margin-right: 15px;"
+          >
+          </el-input>
+          
+          <el-select v-model="selectedTagFilter" placeholder="筛选标签" clearable style="width: 150px;">
+            <el-option label="全部标签" value="" />
+            <el-option v-for="t in allTags" :key="t.id" :label="t.name" :value="t.id" />
+          </el-select>
+        </el-col>
+        
+        <el-col :span="14" style="text-align: right;">
+          <el-button type="info" plain @click="openTagManager">
+            标签管理
+          </el-button>
+          <el-button 
+            v-if="selectedIds?.length > 0" 
+            type="danger" 
+            @click="showDeleteModal = true"
+          >
+            批量删除 (已选 {{ selectedIds?.length || 0 }} 只)
+          </el-button>
+          <el-button type="default" @click="toggleBulkPanel">
+            批量导入 / 导出
+          </el-button>
+          <el-button type="danger" plain @click="resetToDefault">恢复默认</el-button>
+          <el-button type="primary" @click="showAddModal = true">
+            新增自选股
+          </el-button>
+        </el-col>
+      </el-row>
+    </el-card>
+
+    <!-- 批量导入/导出操作面板 -->
+    <el-collapse-transition>
+      <el-card v-if="showBulkPanel" shadow="never" style="margin-bottom: 20px;" class="bulk-panel-card">
+        <template #header>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: bold;">批量导入 / 导出自选股 (自动排重)</span>
+            <el-button type="text" @click="showBulkPanel = false">关闭</el-button>
+          </div>
+        </template>
+        <el-row :gutter="40">
+          <el-col :span="12">
+            <h4>方式一：纯文本快捷操作</h4>
+            <p style="font-size: 13px; color: #909399; margin-bottom: 15px;">格式：每一行代表一只股票，支持空格、制表符或逗号分隔。如：<code>600519 贵州茅台</code></p>
+            <el-input
+              v-model="bulkText"
+              type="textarea"
+              :rows="4"
+              placeholder="粘贴股票列表到此处，或点击下方“生成当前列表文本”进行导出"
+            />
+            <div style="margin-top: 15px; text-align: right;">
+              <el-button type="primary" size="small" @click="importText">确认文本导入</el-button>
+              <el-button type="default" size="small" @click="exportText">生成当前列表文本</el-button>
+            </div>
+          </el-col>
+          
+          <el-col :span="12">
+            <h4>方式二：Excel (CSV) 文件操作</h4>
+            <p style="font-size: 13px; color: #909399; margin-bottom: 15px;">通过标准的 CSV（逗号分隔值）文件实现与 Excel 互通。文件编码建议为 UTF-8。</p>
+            
+            <div style="margin-bottom: 15px;">
+              <el-upload
+                action="#"
+                :auto-upload="false"
+                :show-file-list="false"
+                accept=".csv"
+                :on-change="handleFileChange"
+              >
+                <el-button type="default">选择并导入 CSV 文件</el-button>
+              </el-upload>
+              <span v-if="csvFileName" style="margin-left: 10px; font-size: 13px; color: #67c23a;">已选: {{ csvFileName }}</span>
+            </div>
+
+            <div>
+              <el-button type="primary" @click="exportCSV">导出为 Excel (CSV)</el-button>
+            </div>
+          </el-col>
+        </el-row>
+      </el-card>
+    </el-collapse-transition>
+
+    <!-- 股票列表表格 -->
+    <el-card shadow="never" class="table-card" :body-style="{ padding: '0px' }">
+      <el-table 
+        v-loading="loading" 
+        :data="filteredStocks" 
+        style="width: 100%"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="55" align="center" />
+        <el-table-column type="index" label="序号" width="70" align="center" />
+        <el-table-column prop="code" label="股票代码" width="120">
+          <template #default="scope">
+            <el-link 
+              :href="`https://quote.eastmoney.com/${scope.row.code}.html`" 
+              target="_blank" 
+              type="primary" 
+              style="font-weight: 600;"
+            >
+              {{ scope.row.code }}
+            </el-link>
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="股票名称" width="150" />
+        
+        <el-table-column label="标签">
+          <template #default="scope">
+            <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;" @click="openStockTagsModal(scope.row)">
+              <el-tag 
+                v-for="t in scope.row.tags" 
+                :key="t.id"
+                :color="t.color + '20'"
+                :style="{ color: t.color, borderColor: t.color }"
+                size="small"
+              >
+                {{ t.name }}
+              </el-tag>
+              <el-button v-if="(!scope.row.tags || scope.row.tags.length === 0)" size="small" type="primary" link>+ 标签</el-button>
+            </div>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="添加日期" width="180">
+          <template #default="scope">
+            {{ formatDate(scope.row.created_at) }}
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="scope">
+            <el-button size="small" type="primary" plain @click="openStockTagsModal(scope.row)">设标签</el-button>
+            <el-button size="small" type="danger" plain @click="deleteStock(scope.row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+        
+        <template #empty>
+          <el-empty description="暂无匹配的自选股票，点击右上角“新增自选股”开始。" />
+        </template>
+      </el-table>
+    </el-card>
+
+    <!-- 新增自选股 单独添加模态框 -->
+    <el-dialog v-model="showAddModal" title="新增自选股" width="400px">
+      <el-form label-width="80px">
+        <el-form-item label="股票代码">
+          <el-input v-model="newStock.code" placeholder="例如: 600519" @keyup.enter="addStock"></el-input>
+        </el-form-item>
+        <el-form-item label="股票名称">
+          <el-input v-model="newStock.name" placeholder="例如: 贵州茅台" @keyup.enter="addStock"></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="closeAddModal">取消</el-button>
+          <el-button type="primary" @click="addStock">确认添加</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 批量删除确认模态框 -->
+    <el-dialog v-model="showDeleteModal" title="确认批量删除" width="400px" center>
+      <span>您确定要从自选列表中删除选中的 {{ selectedIds?.length || 0 }} 只股票吗？此操作不可撤销。</span>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showDeleteModal = false">取消</el-button>
+          <el-button type="danger" @click="deleteSelected">确认删除</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 标签全局管理模态框 -->
+    <el-dialog v-model="showTagManagerModal" title="🏷️ 标签管理" width="500px">
+      <div v-if="allTags?.length === 0" style="text-align: center; color: #909399; margin-bottom: 20px;">暂无标签，请在下方新增</div>
+      <div v-else style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 300px; overflow-y: auto;">
+        <div v-for="tag in allTags" :key="tag.id" style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="color" v-model="tag.color" @change="updateTag(tag)" style="border: none; padding: 0; width: 30px; height: 30px; cursor: pointer;" />
+            <el-input v-model="tag.name" @blur="updateTag(tag)" @keyup.enter="updateTag(tag)" size="small" style="width: 150px;"></el-input>
+          </div>
+          <el-button size="small" type="danger" @click="deleteTag(tag.id)">删除</el-button>
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 10px; align-items: center; border-top: 1px solid var(--el-border-color-lighter); padding-top: 15px;">
+        <input type="color" v-model="newTagForm.color" style="border: none; padding: 0; width: 30px; height: 30px; cursor: pointer;" />
+        <el-input v-model="newTagForm.name" placeholder="新标签名称..." @keyup.enter="createTag" size="small" style="flex: 1;"></el-input>
+        <el-button type="primary" size="small" @click="createTag">添加</el-button>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showTagManagerModal = false">关闭</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 设标签 (股票关联) 模态框 -->
+    <el-dialog v-model="showStockTagsModal" :title="`设置标签 (${currentTagsStock?.name})`" width="400px">
+      <div v-if="allTags?.length === 0" style="text-align: center; color: #909399;">
+        尚未创建任何标签。<br>请先到 [标签管理] 中添加标签。
+      </div>
+      <div v-else>
+        <el-checkbox-group v-model="selectedStockTagIds">
+          <el-row :gutter="10">
+            <el-col :span="12" v-for="tag in allTags" :key="tag.id" style="margin-bottom: 10px;">
+              <el-checkbox :label="tag.id" :value="tag.id">
+                <span :style="{ color: tag.color, fontWeight: 'bold' }">{{ tag.name }}</span>
+              </el-checkbox>
+            </el-col>
+          </el-row>
+        </el-checkbox-group>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="closeStockTagsModal">取消</el-button>
+          <el-button type="primary" @click="saveStockTags">确认关联</el-button>
+        </span>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+import { ref, computed, onMounted } from 'vue'
+import { stocksApi, tagsApi } from '../api/stocks'
+
+export default {
+  name: 'StockWatchlist',
+  setup() {
+    const stocks = ref([])
+    const searchQuery = ref('')
+    const selectedIds = ref([])
+    const showAddModal = ref(false)
+    const showDeleteModal = ref(false)
+    const showBulkPanel = ref(false)
+    const bulkText = ref('')
+    const csvFileName = ref('')
+    const loading = ref(false)
+
+    // 标签系统相关状态
+    const allTags = ref([])
+    const selectedTagFilter = ref('')
+    const showTagManagerModal = ref(false)
+    const newTagForm = ref({ name: '', color: '#3b82f6' })
+
+    const showStockTagsModal = ref(false)
+    const currentTagsStock = ref(null)
+    const selectedStockTagIds = ref([])
+
+    const newStock = ref({
+      code: '',
+      name: ''
+    })
+
+    // 初始化数据
+    const loadData = async () => {
+      loading.value = true
+      try {
+        stocks.value = await stocksApi.getStocks()
+      } catch (e) {
+        console.error('Failed to load stocks:', e)
+      } finally {
+        loading.value = false
+      }
+    }
+
+    const loadTags = async () => {
+      try {
+        allTags.value = await tagsApi.getTags()
+      } catch (e) {
+        console.error('Failed to load tags:', e)
+      }
+    }
+
+    // 格式化工具
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '-'
+      try {
+        const d = new Date(dateStr)
+        const y = d.getFullYear()
+        const m = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
+        return `${y}-${m}-${day}`
+      } catch (e) {
+        return dateStr
+      }
+    }
+
+    // 过滤列表
+    const filteredStocks = computed(() => {
+      if (!stocks.value || !Array.isArray(stocks.value)) return []
+      const q = (searchQuery.value || '').trim().toLowerCase()
+      const tFilter = selectedTagFilter.value
+      
+      return stocks.value.filter(s => {
+        const codeStr = String(s.code || '').toLowerCase()
+        const nameStr = String(s.name || '').toLowerCase()
+        const matchQuery = !q || codeStr.includes(q) || nameStr.includes(q)
+        const matchTag = !tFilter || (s.tags && s.tags.some(t => String(t.id) === String(tFilter)))
+        
+        return matchQuery && matchTag
+      })
+    })
+
+    // 全选逻辑 (Element Plus el-table 适用)
+    const handleSelectionChange = (val) => {
+      selectedIds.value = val.map(item => item.id)
+    }
+
+    const hasCode = (code) => {
+      const formatted = code.trim().toLowerCase()
+      return stocks.value.some(s => s.code.trim().toLowerCase() === formatted)
+    }
+
+    // 单个添加
+    const addStock = async () => {
+      const code = newStock.value.code.trim()
+      const name = newStock.value.name.trim()
+
+      if (!code || !name) {
+        alert('请输入股票代码和股票名称')
+        return
+      }
+      if (hasCode(code)) {
+        alert(`股票代码 ${code} 已存在！`)
+        return
+      }
+
+      try {
+        await stocksApi.addStock({ code, name })
+        closeAddModal()
+        await loadData()
+      } catch (e) {
+        alert(`添加失败: ${e.message}`)
+      }
+    }
+
+    // 单个删除
+    const deleteStock = async (id) => {
+      try {
+        await stocksApi.deleteStock(id)
+        selectedIds.value = selectedIds.value.filter(item => item !== id)
+        await loadData()
+      } catch (e) {
+        alert(`删除失败: ${e.message}`)
+      }
+    }
+
+    // 批量删除
+    const deleteSelected = async () => {
+      try {
+        await stocksApi.deleteBatch(selectedIds.value)
+        selectedIds.value = []
+        showDeleteModal.value = false
+        await loadData()
+      } catch (e) {
+        alert(`删除失败: ${e.message}`)
+      }
+    }
+
+    const closeAddModal = () => {
+      showAddModal.value = false
+      newStock.value = { code: '', name: '' }
+    }
+
+    const toggleBulkPanel = () => {
+      showBulkPanel.value = !showBulkPanel.value
+      bulkText.value = ''
+    }
+
+    // 文本批量导入
+    const importText = async () => {
+      if (!bulkText.value.trim()) {
+        alert('请输入股票数据')
+        return
+      }
+
+      const lines = bulkText.value.split('\n')
+      const codeRegex = /^[A-Za-z0-9.]+$/
+      const newStocks = []
+
+      lines.forEach(line => {
+        const text = line.trim()
+        if (!text) return
+        const parts = text.split(/[\s,，\t]+/)
+        if (parts.length >= 2) {
+          let part1 = parts[0].trim()
+          let part2 = parts[1].trim()
+          let code = '', name = ''
+
+          if (codeRegex.test(part2) && !codeRegex.test(part1)) {
+            code = part2; name = part1
+          } else {
+            code = part1; name = part2
+          }
+
+          if (code && name && !hasCode(code)) {
+            newStocks.push({ code, name })
+          }
+        }
+      })
+
+      if (newStocks.length === 0) {
+        alert('没有发现有效且未存在的股票数据。')
+        return
+      }
+
+      try {
+        const res = await stocksApi.importStocks(newStocks)
+        alert(res.message)
+        bulkText.value = ''
+        await loadData()
+      } catch (e) {
+        alert(`导入失败: ${e.message}`)
+      }
+    }
+
+    const exportText = () => {
+      if (stocks.value.length === 0) {
+        alert('列表为空')
+        return
+      }
+      bulkText.value = stocks.value.map(s => `${s.code} ${s.name}`).join('\n')
+    }
+
+    const handleFileChange = (uploadFile) => {
+      const file = uploadFile.raw
+      if (!file) return
+
+      csvFileName.value = file.name
+      const reader = new FileReader()
+      const codeRegex = /^[A-Za-z0-9.]+$/
+      const newStocks = []
+
+      reader.onload = async (evt) => {
+        const text = evt.target.result
+        const lines = text.split(/\r?\n/)
+
+        lines.forEach((line, index) => {
+          const row = line.trim()
+          if (!row) return
+          const parts = row.split(',')
+          if (parts.length >= 2) {
+            let part1 = parts[0].replace(/["']/g, '').trim()
+            let part2 = parts[1].replace(/["']/g, '').trim()
+            if (index === 0 && (part1.includes('代码') || part1.toLowerCase().includes('code') || part2.includes('代码'))) return
+
+            let code = '', name = ''
+            if (codeRegex.test(part2) && !codeRegex.test(part1)) {
+              code = part2; name = part1
+            } else {
+              code = part1; name = part2
+            }
+
+            if (code && name && !hasCode(code)) {
+              newStocks.push({ code, name })
+            }
+          }
+        })
+
+        if (newStocks.length > 0) {
+          try {
+            const res = await stocksApi.importStocks(newStocks)
+            alert(res.message)
+            await loadData()
+          } catch (err) {
+            alert(`导入失败: ${err.message}`)
+          }
+        } else {
+          alert('没有发现有效且未存在的股票数据。')
+        }
+
+        csvFileName.value = ''
+      }
+      reader.readAsText(file, 'UTF-8')
+    }
+
+    const exportCSV = () => {
+      if (stocks.value.length === 0) return
+      const csvContent = '\uFEFF' + '股票代码,股票名称\n' + stocks.value.map(s => `"${s.code}","${s.name}"`).join('\n')
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', `watchlist_${Date.now()}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+
+    const resetToDefault = async () => {
+      if (confirm('确认恢复默认自选股？这会覆盖现有列表。')) {
+        try {
+          const res = await stocksApi.resetToDefault()
+          alert(res.message)
+          await loadData()
+        } catch (e) {
+          alert(`恢复失败: ${e.message}`)
+        }
+      }
+    }
+
+    // --- 标签管理逻辑 ---
+    const openTagManager = () => {
+      showTagManagerModal.value = true
+      loadTags()
+    }
+
+    const createTag = async () => {
+      if (!newTagForm.value.name.trim()) return
+      try {
+        await tagsApi.createTag(newTagForm.value.name, newTagForm.value.color)
+        newTagForm.value = { name: '', color: '#3b82f6' }
+        await loadTags()
+        await loadData() // 刷新股票列表以同步
+      } catch (e) {
+        alert(e.message)
+      }
+    }
+
+    const updateTag = async (tag) => {
+      if (!tag.name.trim()) return
+      try {
+        await tagsApi.updateTag(tag.id, tag.name, tag.color)
+        await loadTags()
+        await loadData() // 自动更新现有列表
+      } catch (e) {
+        alert(e.message)
+      }
+    }
+
+    const deleteTag = async (id) => {
+      if (!confirm('确定要删除该标签吗？关联此标签的股票也会取消该标签。')) return
+      try {
+        await tagsApi.deleteTag(id)
+        if (selectedTagFilter.value === id) selectedTagFilter.value = ''
+        await loadTags()
+        await loadData()
+      } catch (e) {
+        alert(e.message)
+      }
+    }
+
+    // --- 股票关联标签逻辑 ---
+    const openStockTagsModal = (stock) => {
+      currentTagsStock.value = stock
+      selectedStockTagIds.value = (stock.tags || []).map(t => t.id)
+      showStockTagsModal.value = true
+    }
+
+    const closeStockTagsModal = () => {
+      showStockTagsModal.value = false
+      currentTagsStock.value = null
+    }
+
+    const saveStockTags = async () => {
+      if (!currentTagsStock.value) return
+      try {
+        await stocksApi.setStockTags(currentTagsStock.value.id, selectedStockTagIds.value)
+        closeStockTagsModal()
+        await loadData()
+      } catch (e) {
+        alert(e.message)
+      }
+    }
+
+    onMounted(() => {
+      loadTags()
+      loadData()
+    })
+
+    return {
+      stocks,
+      searchQuery,
+      selectedIds,
+      showAddModal,
+      showBulkPanel,
+      bulkText,
+      csvFileName,
+      newStock,
+      loading,
+      filteredStocks,
+      addStock,
+      handleSelectionChange,
+      formatDate,
+      exportText,
+      importText,
+      exportCSV,
+      handleFileChange,
+      toggleBulkPanel,
+      showDeleteModal,
+      resetToDefault,
+      deleteStock,
+      deleteSelected,
+      closeAddModal,
+      
+      allTags,
+      selectedTagFilter,
+      showTagManagerModal,
+      newTagForm,
+      openTagManager,
+      createTag,
+      updateTag,
+      deleteTag,
+
+      showStockTagsModal,
+      currentTagsStock,
+      selectedStockTagIds,
+      openStockTagsModal,
+      closeStockTagsModal,
+      saveStockTags
+    }
+  }
+}
+</script>
+
+<style scoped>
+.watchlist-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 操作面板 */
+.action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  gap: 16px;
+}
+
+.search-box {
+  width: 320px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* 批量操作控制面板 */
+.bulk-panel {
+  padding: 24px;
+  background: rgba(18, 24, 36, 0.85);
+  border-color: rgba(0, 242, 254, 0.2);
+}
+
+.bulk-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-glass);
+  padding-bottom: 12px;
+}
+
+.bulk-header h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  color: var(--text-primary);
+}
+
+.bulk-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+@media (max-width: 768px) {
+  .bulk-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+.bulk-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bulk-section h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.help-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.bulk-textarea {
+  height: 120px;
+  resize: none;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.csv-import-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.csv-upload-btn {
+  display: inline-block;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.file-name {
+  font-size: 12px;
+  color: var(--accent-cyan);
+}
+
+.csv-export-box {
+  margin-top: 12px;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-primary.mini, .btn-secondary.mini {
+  padding: 8px 14px;
+  font-size: 12px;
+}
+
+/* 表格排版 */
+.table-container {
+  overflow-x: auto;
+}
+
+.watchlist-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.watchlist-table th, 
+.watchlist-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-glass);
+  vertical-align: middle;
+}
+
+.watchlist-table th {
+  background: rgba(24, 34, 53, 0.4);
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.watchlist-table tr {
+  transition: background-color 0.2s ease;
+}
+
+.watchlist-table tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.watchlist-table tr.row-selected {
+  background: rgba(0, 242, 254, 0.03);
+}
+
+.select-col {
+  width: 50px;
+  text-align: center;
+}
+
+.select-col input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+}
+
+.index-col {
+  width: 80px;
+  color: var(--text-muted);
+}
+
+.code-col {
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--accent-blue);
+  font-size: 15px;
+}
+
+.name-col {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.actions-col {
+  width: 100px;
+}
+
+.btn-danger.mini {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 64px !important;
+}
+
+/* 模态框样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(5, 5, 8, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  width: 400px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 动画 */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+</style>
