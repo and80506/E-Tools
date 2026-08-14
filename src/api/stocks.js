@@ -4,10 +4,62 @@
 
 const API_BASE = '/api';
 
+const isDemo = import.meta.env && import.meta.env.VITE_DEMO_MODE === 'true';
+
+// 生成一点假数据用于在 GitHub Pages 演示
+const demoData = {
+  stocks: [
+    { id: 1, code: '002081', name: '金螳螂', notes: '行业龙头，观察盈利拐点', order_num: 1, created_at: '2026-08-01', tags: [{id: 1, name: '观察仓', color: '#eab308'}, {id: 2, name: '高股息', color: '#10b981'}] },
+    { id: 2, code: '600519', name: '贵州茅台', notes: '长期底仓', order_num: 2, created_at: '2026-08-02', tags: [{id: 3, name: '长线底仓', color: '#ef4444'}] },
+    { id: 3, code: 'AAPL', name: '苹果', notes: '纳指核心', order_num: 3, created_at: '2026-08-03', tags: [] }
+  ],
+  tags: [
+    { id: 1, name: '观察仓', color: '#eab308' },
+    { id: 2, name: '高股息', color: '#10b981' },
+    { id: 3, name: '长线底仓', color: '#ef4444' }
+  ],
+  reviewDates: ['2026-08-13', '2026-08-14'],
+  dailyReviews: {
+    '2026-08-13': '大盘回调，耐心等待。',
+    '2026-08-14': '触底反弹，金螳螂有异动。'
+  },
+  stockReviews: [
+    { id: 1, stock_id: 1, review_date: '2026-08-14', content: '今天放量上涨，准备试仓。' }
+  ]
+};
+
+const mockDelay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function handleDemoMock(url, options) {
+  await mockDelay(300); // 模拟网络延迟
+  const method = options.method || 'GET';
+  
+  if (url === '/system/status') return { success: true };
+  if (url === '/stocks' && method === 'GET') return { success: true, data: demoData.stocks };
+  if (url === '/tags' && method === 'GET') return { success: true, data: demoData.tags };
+  if (url === '/reviews/dates' && method === 'GET') return { success: true, data: demoData.reviewDates };
+  
+  if (url.startsWith('/reviews/daily/')) {
+    const date = url.split('/').pop();
+    return { success: true, data: { date, content: demoData.dailyReviews[date] || '' } };
+  }
+  if (url.startsWith('/reviews/stock/')) {
+    const date = url.split('/').pop();
+    return { success: true, data: demoData.stockReviews.filter(r => r.review_date === date) };
+  }
+  
+  // 对于写操作，一律返回成功（Mock 环境中页面刷新数据重置）
+  return { success: true, data: { id: Date.now() } };
+}
+
 /**
  * 统一请求封装
  */
 async function request(url, options = {}) {
+  if (isDemo) {
+    return handleDemoMock(url, options);
+  }
+
   const config = {
     headers: {
       'Content-Type': 'application/json',
