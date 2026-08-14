@@ -8,6 +8,7 @@
 [![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite)](https://www.sqlite.org/)
 
 **[🚀 在线演示 Demo](https://and80506.github.io/E-Tools/)**
+> *💡 提示：在线演示版由于无后端服务支撑，采用了纯前端模拟数据，您在页面中的任何操作修改不会被真正持久化，请随意点击体验界面的各项交互功能。*
 
 ---
 
