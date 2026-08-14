@@ -1,28 +1,35 @@
 @echo off
-chcp 65001 >nul
+:: Handle UNC paths for network execution
+pushd "%~dp0"
+
+title ANTIGRAVITY e-tools Build Script
+
 echo =======================================
-echo   开始构建 ANTIGRAVITY e-tools (Windows)
+echo   Building ANTIGRAVITY e-tools 
 echo =======================================
 echo.
 
-echo [1/2]: 安装依赖...
+echo [1/2]: Installing dependencies...
 call npm install
-if %errorlevel% neq 0 (
-    echo [错误] 依赖安装失败，请检查网络或 Node.js 环境。
+if errorlevel 1 (
+    echo [ERROR] Failed to install dependencies. Please check network and Node.js.
     pause
+    popd
     exit /b %errorlevel%
 )
 
-echo [2/2]: 编译前端静态资源...
+echo [2/2]: Building frontend...
 call npm run build
-if %errorlevel% neq 0 (
-    echo [错误] 前端编译失败。
+if errorlevel 1 (
+    echo [ERROR] Failed to build frontend.
     pause
+    popd
     exit /b %errorlevel%
 )
 
 echo.
 echo =======================================
-echo   构建完成！您可以双击 start.bat 启动服务
+echo   Build finished! You can run start.bat
 echo =======================================
+popd
 pause
