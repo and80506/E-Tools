@@ -3,3 +3,8 @@ node_modules
 dist
 dist-ssr
 *.local
+*.log
+build.log
+data/*.db
+data/*.db-shm
+data/*.db-wal
