@@ -2,7 +2,7 @@
   <div class="dashboard-home">
     <div class="welcome-banner glass-card">
       <div class="banner-text">
-        <h1>欢迎回来，Andy</h1>
+        <h1>欢迎回来，主理人</h1>
         <p>合理配置您的投资组合，控制风险，让时间为您赚取复利回报。</p>
       </div>
     </div>

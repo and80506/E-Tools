@@ -41,9 +41,9 @@
 
       <div class="sidebar-footer">
         <div class="user-profile">
-          <el-avatar size="small">AN</el-avatar>
+          <el-avatar size="small">主</el-avatar>
           <div class="user-meta" style="margin-left: 10px;">
-            <span class="user-name" style="font-weight: 600;">Andy</span>
+            <span class="user-name" style="font-weight: 600;">主理人</span>
             <span class="user-status" style="font-size: 12px; opacity: 0.7;">高级投资人</span>
           </div>
         </div>
