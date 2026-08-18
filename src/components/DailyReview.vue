@@ -38,14 +38,12 @@
               </div>
             </div>
           </template>
-          <el-input
+          <MdEditor
             v-model="dailyContent"
-            type="textarea"
-            :rows="20"
             placeholder="在此记录大盘走势、行业轮动、整体投资策略及心态感悟..."
-            style="flex: 1; font-size: 15px;"
-            @keydown.meta.s.prevent="saveDailyReview"
-            @keydown.ctrl.s.prevent="saveDailyReview"
+            style="flex: 1; height: 100%;"
+            :preview="false"
+            @onSave="saveDailyReview"
           />
         </el-card>
       </el-col>
@@ -120,16 +118,15 @@
       class="fullscreen-editor"
     >
       <div style="display: flex; flex-direction: column; height: 100%;">
-        <el-input
-          v-model="dailyContent"
-          type="textarea"
-          :rows="35"
-          placeholder="在此记录大盘走势、行业轮动、整体投资策略及心态感悟..."
-          style="flex: 1; font-size: 16px; margin-bottom: 20px;"
-          resize="none"
-          @keydown.meta.s.prevent="saveDailyReview"
-          @keydown.ctrl.s.prevent="saveDailyReview"
-        />
+        <div style="height: calc(100vh - 150px); display: flex; flex-direction: column; margin-bottom: 20px;">
+          <MdEditor
+            v-model="dailyContent"
+            placeholder="在此记录大盘走势、行业轮动、整体投资策略及心态感悟..."
+            style="flex: 1; height: 100%;"
+            :preview="false"
+            @onSave="saveDailyReview"
+          />
+        </div>
         <div style="display: flex; justify-content: flex-end; gap: 15px;">
           <el-button size="large" @click="showFullscreenReview = false">退出沉浸模式</el-button>
           <el-button size="large" type="primary" @click="saveDailyReview" :loading="savingDaily">
@@ -143,11 +140,16 @@
 
 <script>
 import { ref, computed, onMounted, watch } from 'vue'
-import { FullScreen, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
+import { FullScreen, ArrowLeft, ArrowRight, View, Edit } from '@element-plus/icons-vue'
 import { stocksApi, reviewsApi } from '../api/stocks'
+import { MdEditor } from 'md-editor-v3'
+import 'md-editor-v3/lib/style.css'
 
 export default {
   name: 'DailyReview',
+  components: {
+    MdEditor
+  },
   setup() {
     const getTodayStr = () => {
       const d = new Date()
@@ -316,6 +318,8 @@ export default {
       savingDaily,
       showFullscreenReview,
       FullScreen,
+      View,
+      Edit,
       
       allStocks,
       selectedStockId,
