@@ -18,36 +18,36 @@
           <div style="display: flex; gap: 20px; font-family: monospace; font-size: 13px;">
             <div style="flex: 1; text-align: center;">
               <div>第一阶段（高速增长期）</div>
-              <div style="font-weight: 700; font-size: 16px; margin: 4px 0;">第 1 ~ 5 年</div>
-              <div style="color: #4facfe;">【稳定高增长 30.0%】</div>
+              <div style="font-weight: 700; font-size: 16px; margin: 4px 0;">第 1 ~ {{ stage1Years }} 年</div>
+              <div style="color: #4facfe;">【稳定高增长 {{ stage1Growth.toFixed(1) }}%】</div>
             </div>
             <div style="display: flex; align-items: center; font-size: 18px; color: rgba(255,255,255,0.3);">---></div>
             <div style="flex: 1; text-align: center;">
               <div>第二阶段（过渡期）</div>
-              <div style="font-weight: 700; font-size: 16px; margin: 4px 0;">第 6 ~ 10 年</div>
+              <div style="font-weight: 700; font-size: 16px; margin: 4px 0;">第 {{ stage1Years + 1 }} ~ {{ totalExplicitYears }} 年</div>
               <div style="color: #42d392;">【增长率按年递减】</div>
             </div>
             <div style="display: flex; align-items: center; font-size: 18px; color: rgba(255,255,255,0.3);">---></div>
             <div style="flex: 1; text-align: center;">
               <div>第三阶段（终局期）</div>
-              <div style="font-weight: 700; font-size: 16px; margin: 4px 0;">第 11 年及以后</div>
-              <div style="color: #fca048;">【永续增长 5.0%】</div>
+              <div style="font-weight: 700; font-size: 16px; margin: 4px 0;">第 {{ totalExplicitYears + 1 }} 年及以后</div>
+              <div style="color: #fca048;">【永续增长 {{ terminalGrowth.toFixed(1) }}%】</div>
             </div>
           </div>
         </div>
         
         <ul class="rule-bullets" style="margin-top: 20px;">
           <li>
-            <strong>第一阶段：高速增长期（第 1 ~ 5 年）</strong>
-            <p>增速 <i>g<sub>1</sub></i> = 30% 保持不变。</p>
+            <strong>第一阶段：高速增长期（第 1 ~ {{ stage1Years }} 年）</strong>
+            <p>增速 <i>g<sub>1</sub></i> = {{ stage1Growth.toFixed(1) }}% 保持不变。</p>
           </li>
           <li>
-            <strong>第二阶段：过渡/衰退期（第 6 ~ 10 年）</strong>
-            <p>增速从 30% 向永续增长率逐步线性回落，每年下降固定差值：25.0% → 20.0% → 15.0% → 10.0% → 5.0%。</p>
+            <strong>第二阶段：过渡/衰退期（第 {{ stage1Years + 1 }} ~ {{ totalExplicitYears }} 年）</strong>
+            <p>增速从 {{ stage1Growth.toFixed(1) }}% 向永续增长率逐步线性回落。</p>
           </li>
           <li>
-            <strong>第三阶段：永续增长期（第 11 年及以后）</strong>
-            <p>维持低速 <i>g<sub>n</sub></i> = 5.0% 稳定增长，用戈登股利公式计算终值。</p>
+            <strong>第三阶段：永续增长期（第 {{ totalExplicitYears + 1 }} 年及以后）</strong>
+            <p>维持低速 <i>g<sub>n</sub></i> = {{ terminalGrowth.toFixed(1) }}% 稳定增长，用戈登股利公式计算终值。</p>
           </li>
         </ul>
       </div>
@@ -124,7 +124,7 @@
       <!-- Total Result -->
       <div class="total-result-box">
         <div class="res-item">
-          <div class="res-lbl">Total PV of CF (1-10 Years)</div>
+          <div class="res-lbl">Total PV of CF (1-{{ totalExplicitYears }} Years)</div>
           <div class="res-val">{{ calculatedResult.totalPVofCF.toFixed(2) }}</div>
         </div>
         <div class="res-operator">+</div>
@@ -167,10 +167,19 @@
         <div class="control-row">
           <div class="control-info">
             <label>Stage 1 Years</label>
-            <span>高速增长期年数 (1~9)</span>
+            <span>第一阶段：高速增长期 (1~20年)</span>
           </div>
-          <input type="range" min="1" max="9" step="1" v-model.number="stage1Years" class="slider" />
+          <input type="range" min="1" max="20" step="1" v-model.number="stage1Years" class="slider" />
           <input type="number" v-model.number="stage1Years" class="val-input" />
+        </div>
+
+        <div class="control-row">
+          <div class="control-info">
+            <label>Stage 2 Years</label>
+            <span>第二阶段：过渡/衰退期 (1~20年)</span>
+          </div>
+          <input type="range" min="1" max="20" step="1" v-model.number="stage2Years" class="slider" />
+          <input type="number" v-model.number="stage2Years" class="val-input" />
         </div>
 
         <div class="control-row">
@@ -205,8 +214,11 @@ export default {
     const initialCF = ref(10)
     const stage1Growth = ref(30)
     const stage1Years = ref(5)
+    const stage2Years = ref(5)
     const terminalGrowth = ref(5)
     const wacc = ref(8)
+
+    const totalExplicitYears = computed(() => stage1Years.value + stage2Years.value)
 
     const calculatedResult = computed(() => {
       const g1 = stage1Growth.value / 100
@@ -214,8 +226,8 @@ export default {
       const r = wacc.value / 100
       const y1 = stage1Years.value
       
-      const totalExplicitYears = 10
-      const transitionYears = totalExplicitYears - y1
+      const tYears = totalExplicitYears.value
+      const transitionYears = tYears - y1
       const yearlyDecrement = transitionYears > 0 ? (g1 - gn) / transitionYears : 0
 
       let currentProfit = initialCF.value
@@ -225,7 +237,7 @@ export default {
       let stage1PV = 0
       let stage2PV = 0
 
-      for (let year = 1; year <= totalExplicitYears; year++) {
+      for (let year = 1; year <= tYears; year++) {
         let currentGrowth = 0
         let phaseName = ''
         let phaseClass = ''
@@ -269,7 +281,7 @@ export default {
       if (r > gn) {
         terminalValue = year11Profit / (r - gn)
       }
-      const terminalPV = terminalValue / Math.pow(1 + r, totalExplicitYears)
+      const terminalPV = terminalValue / Math.pow(1 + r, tYears)
       
       const totalValue = totalPVofCF + terminalPV
       const impliedPE = initialCF.value > 0 ? totalValue / initialCF.value : 0
@@ -307,6 +319,8 @@ export default {
       initialCF,
       stage1Growth,
       stage1Years,
+      stage2Years,
+      totalExplicitYears,
       terminalGrowth,
       wacc,
       calculatedResult,
