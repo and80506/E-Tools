@@ -70,7 +70,15 @@ async function request(url, options = {}) {
 
   try {
     const res = await fetch(`${API_BASE}${url}`, config);
-    const result = await res.json();
+    
+    const text = await res.text();
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch (e) {
+      throw new Error(res.ok ? `服务器返回了非预期的格式` : `服务不可用或网络异常 (${res.status})`);
+    }
+
     if (!res.ok || !result.success) {
       throw new Error(result.message || `请求失败 (${res.status})`);
     }

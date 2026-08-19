@@ -3,6 +3,7 @@ import Dashboard from '../components/Dashboard.vue'
 import StockWatchlist from '../components/StockWatchlist.vue'
 import CompoundCalculator from '../components/CompoundCalculator.vue'
 import ValuationEstimator from '../components/ValuationEstimator.vue'
+import ThreeStageDCF from '../components/ThreeStageDCF.vue'
 import DailyReview from '../components/DailyReview.vue'
 
 const routes = [
@@ -34,6 +35,11 @@ const routes = [
     path: '/valuation',
     name: 'Valuation',
     component: ValuationEstimator
+  },
+  {
+    path: '/dcf',
+    name: 'ThreeStageDCF',
+    component: ThreeStageDCF
   }
 ]
 

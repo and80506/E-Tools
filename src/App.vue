@@ -37,6 +37,10 @@
           <el-icon><TrendCharts /></el-icon>
           <span>公司估值</span>
         </el-menu-item>
+        <el-menu-item index="/dcf">
+          <el-icon><TrendCharts /></el-icon>
+          <span>三阶段 DCF</span>
+        </el-menu-item>
       </el-menu>
 
       <div class="sidebar-footer">
@@ -98,6 +102,7 @@ export default {
       if (path === '/watchlist') return '股票自选管理 / Watchlist'
       if (path === '/calculator') return '复利财富成长模拟 / Calculator'
       if (path === '/valuation') return '公司估值反推 (段永平法) / Valuation'
+      if (path === '/dcf') return '三阶段 DCF 模型估值 / DCF Valuation'
       if (path === '/dailyReview') return '复盘笔记 / Daily Review'
       return '投资工具箱'
     })
