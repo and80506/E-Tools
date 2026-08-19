@@ -39,7 +39,7 @@
         <ul class="rule-bullets" style="margin-top: 20px;">
           <li>
             <strong>第一阶段：高速增长期（第 1 ~ 5 年）</strong>
-            <p>增速 $g_1 = 30\%$ 保持不变。</p>
+            <p>增速 <i>g<sub>1</sub></i> = 30% 保持不变。</p>
           </li>
           <li>
             <strong>第二阶段：过渡/衰退期（第 6 ~ 10 年）</strong>
@@ -47,7 +47,7 @@
           </li>
           <li>
             <strong>第三阶段：永续增长期（第 11 年及以后）</strong>
-            <p>维持低速 $g_n = 5.0\%$ 稳定增长，用戈登股利公式计算终值。</p>
+            <p>维持低速 <i>g<sub>n</sub></i> = 5.0% 稳定增长，用戈登股利公式计算终值。</p>
           </li>
         </ul>
       </div>
@@ -136,6 +136,11 @@
         <div class="res-item highlight">
           <div class="res-lbl">Total Firm Value</div>
           <div class="res-val">{{ calculatedResult.totalValue.toFixed(2) }}</div>
+        </div>
+        <div class="res-operator" style="margin: 0 10px; color: rgba(255,255,255,0.2);">|</div>
+        <div class="res-item highlight" style="color: #10b981;">
+          <div class="res-lbl">Implied P/E</div>
+          <div class="res-val">{{ calculatedResult.impliedPE.toFixed(1) }}x</div>
         </div>
       </div>
 
@@ -267,12 +272,14 @@ export default {
       const terminalPV = terminalValue / Math.pow(1 + r, totalExplicitYears)
       
       const totalValue = totalPVofCF + terminalPV
+      const impliedPE = initialCF.value > 0 ? totalValue / initialCF.value : 0
 
       return {
         yearlyData,
         totalPVofCF,
         terminalPV,
         totalValue,
+        impliedPE,
         stage1PV,
         stage2PV
       }
