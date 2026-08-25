@@ -11,12 +11,16 @@ const demoData = {
   stocks: [
     { id: 1, code: '002081', name: '金螳螂', notes: '行业龙头，观察盈利拐点', order_num: 1, created_at: '2026-08-01', tags: [{id: 1, name: '观察仓', color: '#eab308'}, {id: 2, name: '高股息', color: '#10b981'}] },
     { id: 2, code: '600519', name: '贵州茅台', notes: '长期底仓', order_num: 2, created_at: '2026-08-02', tags: [{id: 3, name: '长线底仓', color: '#ef4444'}] },
-    { id: 3, code: 'AAPL', name: '苹果', notes: '纳指核心', order_num: 3, created_at: '2026-08-03', tags: [] }
+    { id: 3, code: 'AAPL', name: '苹果', notes: '纳指核心', order_num: 3, created_at: '2026-08-03', tags: [] },
+    { id: 4, code: '000002', name: '万科A', notes: '地产龙头，关注政策放松力度', order_num: 4, created_at: '2026-08-05', tags: [{id: 1, name: '观察仓', color: '#eab308'}] },
+    { id: 5, code: '300750', name: '宁德时代', notes: '新能源电池巨头', order_num: 5, created_at: '2026-08-10', tags: [{id: 4, name: '波段操作', color: '#3b82f6'}] },
+    { id: 6, code: 'MSFT', name: '微软', notes: 'AI 领导者', order_num: 6, created_at: '2026-08-15', tags: [{id: 3, name: '长线底仓', color: '#ef4444'}] }
   ],
   tags: [
     { id: 1, name: '观察仓', color: '#eab308' },
     { id: 2, name: '高股息', color: '#10b981' },
-    { id: 3, name: '长线底仓', color: '#ef4444' }
+    { id: 3, name: '长线底仓', color: '#ef4444' },
+    { id: 4, name: '波段操作', color: '#3b82f6' }
   ],
   reviewDates: ['2026-08-13', '2026-08-14'],
   dailyReviews: {
