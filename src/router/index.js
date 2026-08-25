@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import Dashboard from '../components/Dashboard.vue'
 import StockWatchlist from '../components/StockWatchlist.vue'
 import CompoundCalculator from '../components/CompoundCalculator.vue'
@@ -44,7 +44,7 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes
 })
 

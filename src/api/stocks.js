@@ -51,6 +51,16 @@ async function handleDemoMock(url, options) {
     const date = url.split('/').pop();
     return { success: true, data: demoData.stockReviews.filter(r => r.review_date === date) };
   }
+  if (url.match(/^\/stocks\/[^\/]+\/reviews$/) && method === 'GET') {
+    const stockId = url.split('/')[2];
+    return { success: true, data: demoData.stockReviews.filter(r => String(r.stock_id) === String(stockId)) };
+  }
+  if (url === '/trades' && method === 'GET') {
+    return { success: true, data: [] }; // 演示环境暂无交易数据
+  }
+  if (url.match(/^\/stocks\/[^\/]+\/fcf$/) && method === 'GET') {
+    return { success: true, data: { operatingCashFlow: 30000000000, capex: 5000000000, fcf: 25000000000, marketCap: 300000000000, fcfYield: 8.33 } };
+  }
   
   // 对于写操作，一律返回成功（Mock 环境中页面刷新数据重置）
   return { success: true, data: { id: Date.now() } };
