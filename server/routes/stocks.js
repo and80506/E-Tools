@@ -244,4 +244,42 @@ router.get('/stocks/:code/fcf', async (req, res) => {
   }
 });
 
+// ================== 交易复盘 API ==================
+
+// 获取所有交易记录
+router.get('/trades', (req, res) => {
+  try {
+    const records = dbService.getTradeRecords();
+    res.json({ success: true, data: records });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 新增交易记录
+router.post('/trades', (req, res) => {
+  try {
+    const record = req.body;
+    const newRecord = dbService.addTradeRecord(record);
+    res.json({ success: true, data: newRecord });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// 删除交易记录
+router.delete('/trades/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const changes = dbService.deleteTradeRecord(id);
+    if (changes > 0) {
+      res.json({ success: true, message: '删除成功' });
+    } else {
+      res.status(404).json({ success: false, message: '未找到该交易记录' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;

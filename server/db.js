@@ -30,6 +30,7 @@ const JSON_TAGS_PATH = path.join(DATA_DIR, 'tags.json');
 const JSON_STOCK_TAGS_PATH = path.join(DATA_DIR, 'stock_tags.json');
 const JSON_DAILY_REVIEWS_PATH = path.join(DATA_DIR, 'daily_reviews.json');
 const JSON_STOCK_REVIEWS_PATH = path.join(DATA_DIR, 'stock_reviews.json');
+const JSON_TRADE_RECORDS_PATH = path.join(DATA_DIR, 'trade_records.json');
 
 try {
   const Database = require('better-sqlite3');
@@ -71,6 +72,20 @@ try {
       content TEXT,
       FOREIGN KEY (stock_id) REFERENCES stocks(id) ON DELETE CASCADE,
       UNIQUE(stock_id, review_date)
+    );
+    CREATE TABLE IF NOT EXISTS trade_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL,
+      name TEXT NOT NULL,
+      trade_date TEXT NOT NULL,
+      type TEXT NOT NULL,
+      quantity REAL NOT NULL,
+      unit TEXT NOT NULL,
+      price REAL,
+      reason TEXT,
+      return_rate TEXT,
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
   db.pragma('foreign_keys = ON');
@@ -150,6 +165,12 @@ function readJsonStockReviews() {
 }
 function writeJsonStockReviews(data) {
   fs.writeFileSync(JSON_STOCK_REVIEWS_PATH, JSON.stringify(data, null, 2), 'utf-8');
+}
+function readJsonTradeRecords() {
+  try { return JSON.parse(fs.readFileSync(JSON_TRADE_RECORDS_PATH, 'utf-8') || '[]'); } catch { return []; }
+}
+function writeJsonTradeRecords(data) {
+  fs.writeFileSync(JSON_TRADE_RECORDS_PATH, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 const dbService = {
@@ -508,6 +529,58 @@ const dbService = {
       }
       writeJsonStockReviews(reviews);
       return 1;
+    }
+  },
+
+  // ---------------- 交易复盘 API ---------------- //
+  getTradeRecords() {
+    if (!useJsonFallback) {
+      return db.prepare('SELECT * FROM trade_records ORDER BY trade_date DESC, id DESC').all();
+    } else {
+      const records = readJsonTradeRecords();
+      return records.sort((a, b) => {
+        if (a.trade_date !== b.trade_date) {
+          return a.trade_date > b.trade_date ? -1 : 1;
+        }
+        return b.id - a.id;
+      });
+    }
+  },
+
+  addTradeRecord(trade) {
+    const { code, name, trade_date, type, quantity, unit, price = null, reason = '', return_rate = '', notes = '' } = trade;
+    if (!code || !trade_date || !type || quantity === undefined) {
+      throw new Error('交易记录核心字段缺失');
+    }
+    if (!useJsonFallback) {
+      const stmt = db.prepare(`
+        INSERT INTO trade_records (code, name, trade_date, type, quantity, unit, price, reason, return_rate, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      const res = stmt.run(code, name, trade_date, type, quantity, unit, price, reason, return_rate, notes);
+      return db.prepare('SELECT * FROM trade_records WHERE id = ?').get(res.lastInsertRowid);
+    } else {
+      const records = readJsonTradeRecords();
+      const newId = records.reduce((max, r) => Math.max(max, r.id || 0), 0) + 1;
+      const newRecord = {
+        id: newId, code, name, trade_date, type, quantity, unit, price, reason, return_rate, notes,
+        created_at: new Date().toISOString()
+      };
+      records.push(newRecord);
+      writeJsonTradeRecords(records);
+      return newRecord;
+    }
+  },
+
+  deleteTradeRecord(id) {
+    if (!useJsonFallback) {
+      return db.prepare('DELETE FROM trade_records WHERE id = ?').run(id).changes;
+    } else {
+      const records = readJsonTradeRecords();
+      const nextRecords = records.filter(r => r.id !== id);
+      const deletedCount = records.length - nextRecords.length;
+      writeJsonTradeRecords(nextRecords);
+      return deletedCount;
     }
   }
 };

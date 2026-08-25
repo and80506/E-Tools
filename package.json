@@ -7,7 +7,9 @@
     "build": "vite build",
     "server": "node server/index.js",
     "start": "node server/index.js",
-    "build:serve": "npm run build && node server/index.js"
+    "build:serve": "npm run build && node server/index.js",
+    "seed:trades": "node private_scripts/seed_trades.example.js",
+    "seed:reviews": "node private_scripts/seed_reviews.example.js"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",

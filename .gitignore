@@ -8,3 +8,6 @@ build.log
 data/*.db
 data/*.db-shm
 data/*.db-wal
+# Private data scripts
+private_scripts/*
+!private_scripts/*.example.js

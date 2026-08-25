@@ -8,71 +8,78 @@
             <span class="logo-text">E-Tools</span>
           </h1>
         </div>
-      
-      <el-menu
-        :default-active="$route.path"
-        class="el-menu-vertical"
-        background-color="transparent"
-        text-color="#cba6f7"
-        active-text-color="#fff"
-        router
-      >
-        <el-menu-item index="/dashboard">
-          <el-icon><DataBoard /></el-icon>
-          <span>控制台首页</span>
-        </el-menu-item>
-        <el-menu-item index="/watchlist">
-          <el-icon><List /></el-icon>
-          <span>股票自选列表</span>
-        </el-menu-item>
-        <el-menu-item index="/dailyReview">
-          <el-icon><Notebook /></el-icon>
-          <span>复盘笔记</span>
-        </el-menu-item>
-        <el-menu-item index="/calculator">
-          <el-icon><DataBoard /></el-icon>
-          <span>复利计算器</span>
-        </el-menu-item>
-        <el-menu-item index="/valuation">
-          <el-icon><TrendCharts /></el-icon>
-          <span>公司估值</span>
-        </el-menu-item>
-        <el-menu-item index="/dcf">
-          <el-icon><TrendCharts /></el-icon>
-          <span>三阶段 DCF</span>
-        </el-menu-item>
-      </el-menu>
 
-      <div class="sidebar-footer">
-        <div class="user-profile">
-          <el-avatar size="small">主</el-avatar>
-          <div class="user-meta" style="margin-left: 10px;">
-            <span class="user-name" style="font-weight: 600;">主理人</span>
-            <span class="user-status" style="font-size: 12px; opacity: 0.7;">高级投资人</span>
+        <el-menu :default-active="$route.path" class="el-menu-vertical" background-color="transparent"
+          text-color="#cba6f7" active-text-color="#fff" router>
+          <el-menu-item index="/dashboard">
+            <el-icon>
+              <DataBoard />
+            </el-icon>
+            <span>控制台首页</span>
+          </el-menu-item>
+          <el-menu-item index="/watchlist">
+            <el-icon>
+              <List />
+            </el-icon>
+            <span>自选列表</span>
+          </el-menu-item>
+          <el-menu-item index="/dailyReview">
+            <el-icon>
+              <Notebook />
+            </el-icon>
+            <span>复盘笔记</span>
+          </el-menu-item>
+          <el-menu-item index="/calculator">
+            <el-icon>
+              <DataBoard />
+            </el-icon>
+            <span>复利计算器</span>
+          </el-menu-item>
+          <el-menu-item index="/valuation">
+            <el-icon>
+              <TrendCharts />
+            </el-icon>
+            <span>公司估值</span>
+          </el-menu-item>
+          <el-menu-item index="/dcf">
+            <el-icon>
+              <TrendCharts />
+            </el-icon>
+            <span>三阶段 DCF</span>
+          </el-menu-item>
+        </el-menu>
+
+        <div class="sidebar-footer">
+          <div class="user-profile">
+            <el-avatar size="small">主</el-avatar>
+            <div class="user-meta" style="margin-left: 10px;">
+              <span class="user-name" style="font-weight: 600;">主理人</span>
+              <span class="user-status" style="font-size: 12px; opacity: 0.7;">高级投资人</span>
+            </div>
           </div>
         </div>
-      </div>
-    </el-aside>
+      </el-aside>
 
-    <el-container>
-      <el-header class="top-header" height="60px">
-        <div class="header-content">
-          <h2 class="page-title">{{ viewTitle }}</h2>
-          <div class="server-status" :class="{ 'status-ok': serverStatus === 'online', 'status-error': serverStatus !== 'online' }">
-            <span class="status-dot"></span>
-            {{ serverStatus === 'online' ? '局域网数据服务 (SQLite) 在线' : '局域网服务连接异常' }}
+      <el-container>
+        <el-header class="top-header" height="60px">
+          <div class="header-content">
+            <h2 class="page-title">{{ viewTitle }}</h2>
+            <div class="server-status"
+              :class="{ 'status-ok': serverStatus === 'online', 'status-error': serverStatus !== 'online' }">
+              <span class="status-dot"></span>
+              {{ serverStatus === 'online' ? '局域网数据服务 (SQLite) 在线' : '局域网服务连接异常' }}
+            </div>
           </div>
-        </div>
-      </el-header>
+        </el-header>
 
-      <el-main class="content-wrapper">
-        <router-view v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </router-view>
-      </el-main>
-    </el-container>
+        <el-main class="content-wrapper">
+          <router-view v-slot="{ Component }">
+            <transition name="fade" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
+        </el-main>
+      </el-container>
     </el-container>
   </el-config-provider>
 </template>
@@ -99,7 +106,7 @@ export default {
     const viewTitle = computed(() => {
       const path = route.path
       if (path === '/dashboard' || path === '/') return '控制台首页 / Dashboard'
-      if (path === '/watchlist') return '股票自选管理 / Watchlist'
+      if (path === '/watchlist') return '自选管理 / Watchlist'
       if (path === '/calculator') return '复利财富成长模拟 / Calculator'
       if (path === '/valuation') return '公司估值反推 (段永平法) / Valuation'
       if (path === '/dcf') return '三阶段 DCF 模型估值 / DCF Valuation'
@@ -157,8 +164,10 @@ export default {
   .app-layout {
     grid-template-columns: 1fr;
   }
+
   .sidebar {
-    display: none !important; /* 简易移动端隐藏，实际中可增加移动端侧栏 */
+    display: none !important;
+    /* 简易移动端隐藏，实际中可增加移动端侧栏 */
   }
 }
 
@@ -335,7 +344,8 @@ export default {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: var(--stock-down); /* 绿色代表连线良好 */
+  background-color: var(--stock-down);
+  /* 绿色代表连线良好 */
   box-shadow: 0 0 8px var(--stock-down);
   animation: pulse-cyan 2s infinite;
 }

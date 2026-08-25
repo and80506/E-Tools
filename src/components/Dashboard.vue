@@ -9,7 +9,7 @@
     <!-- 工具选择卡片网格 -->
     <div class="tools-grid">
       <div class="glass-card tool-preview-card" @click="goTo('/watchlist')">
-        <h3>股票自选列表</h3>
+        <h3>自选列表</h3>
         <p>支持自选股的增删改查。提供模拟实时盘中价格波动。</p>
       </div>
       <div class="glass-card tool-preview-card" @click="goTo('/calculator')">
@@ -27,11 +27,11 @@ export default {
   name: 'Dashboard',
   setup() {
     const router = useRouter()
-    
+
     const goTo = (path) => {
       router.push(path)
     }
-    
+
     return {
       goTo
     }

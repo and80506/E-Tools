@@ -160,6 +160,26 @@ export const stocksApi = {
   // 获取 FCF 数据
   async getFCF(code) {
     return await request(`/stocks/${code}/fcf`);
+  },
+
+  // ================= 交易复盘相关 =================
+  async getTrades() {
+    const res = await request('/trades');
+    return res.data || [];
+  },
+
+  async addTrade(tradeData) {
+    const res = await request('/trades', {
+      method: 'POST',
+      body: JSON.stringify(tradeData)
+    });
+    return res.data;
+  },
+
+  async deleteTrade(id) {
+    return await request(`/trades/${id}`, {
+      method: 'DELETE'
+    });
   }
 };
 

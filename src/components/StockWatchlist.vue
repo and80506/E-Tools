@@ -18,6 +18,9 @@
           <el-button type="info" plain @click="openTagManager">
             标签管理
           </el-button>
+          <el-button type="success" plain @click="openTradeReview">
+            交易复盘
+          </el-button>
           <el-button v-if="selectedIds?.length > 0" type="danger" @click="showDeleteModal = true">
             批量删除 (已选 {{ selectedIds?.length || 0 }} 只)
           </el-button>
@@ -111,11 +114,11 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="260" fixed="right">
+        <el-table-column label="操作" width="310" fixed="right">
           <template #default="scope">
+            <el-button size="small" type="warning" plain @click="openAddTradeModal(scope.row)">买卖</el-button>
             <el-button size="small" type="success" plain @click="calculateFCF(scope.row)"
               :loading="scope.row.fcfLoading">FCF</el-button>
-            <el-button size="small" type="primary" plain @click="openStockTagsModal(scope.row)">设标签</el-button>
             <el-button size="small" type="danger" plain @click="deleteStock(scope.row.id)">删除</el-button>
           </template>
         </el-table-column>
@@ -242,11 +245,80 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 交易记录录入模态框 -->
+    <el-dialog v-model="showAddTradeModal" :title="`记录交易 - ${currentTradeStock?.name}`" width="450px">
+      <el-form label-width="80px" size="small">
+        <el-form-item label="交易日期">
+          <el-date-picker v-model="newTradeForm.trade_date" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" style="width: 100%;"></el-date-picker>
+        </el-form-item>
+        <el-form-item label="操作方向">
+          <el-radio-group v-model="newTradeForm.type">
+            <el-radio label="buy">买入</el-radio>
+            <el-radio label="sell">卖出</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="数量">
+          <div style="display: flex; gap: 10px;">
+            <el-input-number v-model="newTradeForm.quantity" :min="1" style="flex: 1;"></el-input-number>
+            <el-select v-model="newTradeForm.unit" style="width: 100px;">
+              <el-option label="股" value="股"></el-option>
+              <el-option label="手" value="手"></el-option>
+              <el-option label="份额" value="份额"></el-option>
+            </el-select>
+          </div>
+        </el-form-item>
+        <el-form-item label="原因逻辑">
+          <el-input type="textarea" v-model="newTradeForm.reason" rows="2" placeholder="买入/卖出原因"></el-input>
+        </el-form-item>
+        <el-form-item label="收益率">
+          <el-input v-model="newTradeForm.return_rate" placeholder="例如: 8.32% 或 清仓收益率39.92%"></el-input>
+        </el-form-item>
+        <el-form-item label="额外备注">
+          <el-input v-model="newTradeForm.notes" placeholder="例如: 1/4仓位, 清仓, 未成交等"></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showAddTradeModal = false">取消</el-button>
+          <el-button type="primary" @click="submitTrade">保存记录</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 交易复盘记录抽屉 -->
+    <el-drawer v-model="showTradeReviewDrawer" title="交易复盘历史" size="60%">
+      <el-table :data="tradeRecords" style="width: 100%" max-height="800">
+        <el-table-column prop="trade_date" label="日期" width="100"></el-table-column>
+        <el-table-column prop="name" label="名称" width="100"></el-table-column>
+        <el-table-column label="操作" width="80">
+          <template #default="scope">
+            <el-tag :type="scope.row.type === 'buy' ? 'danger' : 'success'" size="small">
+              {{ scope.row.type === 'buy' ? '买入' : '卖出' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="数量" width="120">
+          <template #default="scope">
+            {{ scope.row.quantity }} {{ scope.row.unit }}
+            <span v-if="scope.row.notes" style="color:#909399; font-size:12px;"><br>({{ scope.row.notes }})</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="reason" label="原因/逻辑"></el-table-column>
+        <el-table-column prop="return_rate" label="收益率" width="120"></el-table-column>
+        <el-table-column label="操作" width="80" fixed="right">
+          <template #default="scope">
+            <el-button size="small" type="danger" link @click="deleteTradeRecord(scope.row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-drawer>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { stocksApi, tagsApi } from '../api/stocks'
 
 export default {
@@ -279,6 +351,21 @@ export default {
     const newStock = ref({
       code: '',
       name: ''
+    })
+
+    // 交易记录
+    const showTradeReviewDrawer = ref(false)
+    const tradeRecords = ref([])
+    const showAddTradeModal = ref(false)
+    const currentTradeStock = ref(null)
+    const newTradeForm = ref({
+      trade_date: new Date().toISOString().split('T')[0],
+      type: 'buy',
+      quantity: null,
+      unit: '股',
+      reason: '',
+      return_rate: '',
+      notes: ''
     })
 
     // 初始化数据
@@ -347,11 +434,11 @@ export default {
       const name = newStock.value.name.trim()
 
       if (!code || !name) {
-        alert('请输入股票代码和股票名称')
+        ElMessage.error('请输入股票代码和股票名称')
         return
       }
       if (hasCode(code)) {
-        alert(`股票代码 ${code} 已存在！`)
+        ElMessage.error(`股票代码 ${code} 已存在！`)
         return
       }
 
@@ -360,7 +447,7 @@ export default {
         closeAddModal()
         await loadData()
       } catch (e) {
-        alert(`添加失败: ${e.message}`)
+        ElMessage.error(`添加失败: ${e.message}`)
       }
     }
 
@@ -371,7 +458,7 @@ export default {
         selectedIds.value = selectedIds.value.filter(item => item !== id)
         await loadData()
       } catch (e) {
-        alert(`删除失败: ${e.message}`)
+        ElMessage.error(`删除失败: ${e.message}`)
       }
     }
 
@@ -383,7 +470,7 @@ export default {
         showDeleteModal.value = false
         await loadData()
       } catch (e) {
-        alert(`删除失败: ${e.message}`)
+        ElMessage.error(`删除失败: ${e.message}`)
       }
     }
 
@@ -400,7 +487,7 @@ export default {
     // 文本批量导入
     const importText = async () => {
       if (!bulkText.value.trim()) {
-        alert('请输入股票数据')
+        ElMessage.error('请输入股票数据')
         return
       }
 
@@ -430,23 +517,23 @@ export default {
       })
 
       if (newStocks.length === 0) {
-        alert('没有发现有效且未存在的股票数据。')
+        ElMessage.error('没有发现有效且未存在的股票数据。')
         return
       }
 
       try {
         const res = await stocksApi.importStocks(newStocks)
-        alert(res.message)
+        ElMessage.error(res.message)
         bulkText.value = ''
         await loadData()
       } catch (e) {
-        alert(`导入失败: ${e.message}`)
+        ElMessage.error(`导入失败: ${e.message}`)
       }
     }
 
     const exportText = () => {
       if (stocks.value.length === 0) {
-        alert('列表为空')
+        ElMessage.error('列表为空')
         return
       }
       bulkText.value = stocks.value.map(s => `${s.code} ${s.name}`).join('\n')
@@ -490,13 +577,13 @@ export default {
         if (newStocks.length > 0) {
           try {
             const res = await stocksApi.importStocks(newStocks)
-            alert(res.message)
+            ElMessage.error(res.message)
             await loadData()
           } catch (err) {
-            alert(`导入失败: ${err.message}`)
+            ElMessage.error(`导入失败: ${err.message}`)
           }
         } else {
-          alert('没有发现有效且未存在的股票数据。')
+          ElMessage.error('没有发现有效且未存在的股票数据。')
         }
 
         csvFileName.value = ''
@@ -519,13 +606,13 @@ export default {
     }
 
     const resetToDefault = async () => {
-      if (confirm('确认恢复默认自选股？这会覆盖现有列表。')) {
+      if (await ElMessageBox.confirm('确认恢复默认自选股？这会覆盖现有列表。', '提示', { type: 'warning' }).catch(() => false)) {
         try {
           const res = await stocksApi.resetToDefault()
-          alert(res.message)
+          ElMessage.error(res.message)
           await loadData()
         } catch (e) {
-          alert(`恢复失败: ${e.message}`)
+          ElMessage.error(`恢复失败: ${e.message}`)
         }
       }
     }
@@ -544,7 +631,7 @@ export default {
         await loadTags()
         await loadData() // 刷新股票列表以同步
       } catch (e) {
-        alert(e.message)
+        ElMessage.error(e.message)
       }
     }
 
@@ -555,19 +642,19 @@ export default {
         await loadTags()
         await loadData() // 自动更新现有列表
       } catch (e) {
-        alert(e.message)
+        ElMessage.error(e.message)
       }
     }
 
     const deleteTag = async (id) => {
-      if (!confirm('确定要删除该标签吗？关联此标签的股票也会取消该标签。')) return
+      if (!(await ElMessageBox.confirm('确定要删除该标签吗？关联此标签的股票也会取消该标签。', '提示', { type: 'warning' }).catch(() => false))) return
       try {
         await tagsApi.deleteTag(id)
         if (selectedTagFilter.value === id) selectedTagFilter.value = ''
         await loadTags()
         await loadData()
       } catch (e) {
-        alert(e.message)
+        ElMessage.error(e.message)
       }
     }
 
@@ -590,30 +677,90 @@ export default {
         closeStockTagsModal()
         await loadData()
       } catch (e) {
-        alert(e.message)
+        ElMessage.error(e.message)
       }
     }
 
-    // --- FCF 计算逻辑 ---
+    // -------------- FCF 计算 ---------------- //
     const calculateFCF = async (stock) => {
       stock.fcfLoading = true
       try {
         const res = await stocksApi.getFCF(stock.code)
         if (res.success && res.data) {
-          currentFcfStock.value = stock
           fcfResult.value = res.data
+          currentFcfStock.value = stock
           showFcfModal.value = true
+        } else {
+          ElMessage.error(res.message || '获取FCF数据失败')
         }
-      } catch (e) {
-        alert(e.message)
+      } catch (err) {
+        ElMessage.error('获取FCF失败，请检查网络或后端服务: ' + err.message)
       } finally {
         stock.fcfLoading = false
       }
     }
 
+    // -------------- 交易复盘 ---------------- //
+    const loadTrades = async () => {
+      try {
+        const res = await stocksApi.getTrades()
+        tradeRecords.value = res || []
+      } catch (e) {
+        console.error('Failed to load trades:', e)
+      }
+    }
+
+    const openTradeReview = async () => {
+      await loadTrades()
+      showTradeReviewDrawer.value = true
+    }
+
+    const openAddTradeModal = (stock) => {
+      currentTradeStock.value = stock
+      newTradeForm.value = {
+        trade_date: new Date().toISOString().split('T')[0],
+        type: 'buy',
+        quantity: null,
+        unit: '股',
+        reason: '',
+        return_rate: '',
+        notes: ''
+      }
+      showAddTradeModal.value = true
+    }
+
+    const submitTrade = async () => {
+      if (!newTradeForm.value.quantity) {
+        ElMessage.error('请输入交易数量')
+        return
+      }
+      try {
+        await stocksApi.addTrade({
+          code: currentTradeStock.value.code,
+          name: currentTradeStock.value.name,
+          ...newTradeForm.value
+        })
+        showAddTradeModal.value = false
+        loadTrades() // Update background list if it's open
+        ElMessage.success('交易记录已保存')
+      } catch (e) {
+        ElMessage.error('保存失败: ' + e.message)
+      }
+    }
+
+    const deleteTradeRecord = async (id) => {
+      if (!(await ElMessageBox.confirm('确认删除该条交易记录？', '提示', { type: 'warning' }).catch(() => false))) return
+      try {
+        await stocksApi.deleteTrade(id)
+        loadTrades()
+      } catch (e) {
+        ElMessage.error('删除失败: ' + e.message)
+      }
+    }
+
     onMounted(() => {
-      loadTags()
       loadData()
+      loadTags()
     })
 
     return {
@@ -657,10 +804,20 @@ export default {
       closeStockTagsModal,
       saveStockTags,
 
-      showFcfModal,
       currentFcfStock,
+      showFcfModal,
       fcfResult,
-      calculateFCF
+      calculateFCF,
+
+      showTradeReviewDrawer,
+      tradeRecords,
+      showAddTradeModal,
+      currentTradeStock,
+      newTradeForm,
+      openTradeReview,
+      openAddTradeModal,
+      submitTrade,
+      deleteTradeRecord
     }
   }
 }
