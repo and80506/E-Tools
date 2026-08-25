@@ -317,6 +317,25 @@
 
     <!-- 个股复盘历史抽屉 -->
     <el-drawer v-model="showStockReviewDrawer" :title="(currentReviewStock?.name || '') + ' - 历史复盘'" size="50%">
+      <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-start;">
+        <el-date-picker
+          v-model="newReviewForm.date"
+          type="date"
+          value-format="YYYY-MM-DD"
+          placeholder="选择日期"
+          style="width: 160px;"
+          :clearable="false"
+        />
+        <el-input 
+          v-model="newReviewForm.content" 
+          type="textarea"
+          :rows="2"
+          placeholder="输入新的笔记内容..." 
+          style="flex: 1;"
+        />
+        <el-button type="primary" @click="submitNewReview" :loading="submittingReview">添加笔记</el-button>
+      </div>
+
       <el-table :data="stockReviewHistory" style="width: 100%" max-height="800">
         <el-table-column label="日期" width="160">
           <template #default="scope">
@@ -400,6 +419,11 @@ export default {
     const showStockReviewDrawer = ref(false)
     const currentReviewStock = ref(null)
     const stockReviewHistory = ref([])
+    const submittingReview = ref(false)
+    const newReviewForm = ref({
+      date: new Date().toISOString().split('T')[0],
+      content: ''
+    })
 
     // 初始化数据
     const loadData = async () => {
@@ -795,10 +819,30 @@ export default {
     const openStockReviewHistory = async (stock) => {
       try {
         currentReviewStock.value = stock
+        newReviewForm.value.date = new Date().toISOString().split('T')[0]
+        newReviewForm.value.content = ''
         stockReviewHistory.value = await reviewsApi.getStockReviews(stock.id)
         showStockReviewDrawer.value = true
       } catch (err) {
         ElMessage.error('加载个股复盘历史失败: ' + err.message)
+      }
+    }
+
+    const submitNewReview = async () => {
+      if (!newReviewForm.value.content.trim()) {
+        ElMessage.warning('笔记内容不能为空')
+        return
+      }
+      submittingReview.value = true
+      try {
+        await reviewsApi.saveStockReview(currentReviewStock.value.id, newReviewForm.value.date, newReviewForm.value.content)
+        ElMessage.success('笔记添加成功')
+        newReviewForm.value.content = ''
+        stockReviewHistory.value = await reviewsApi.getStockReviews(currentReviewStock.value.id)
+      } catch (e) {
+        ElMessage.error('添加失败: ' + e.message)
+      } finally {
+        submittingReview.value = false
       }
     }
 
@@ -878,7 +922,10 @@ export default {
       showStockReviewDrawer,
       currentReviewStock,
       stockReviewHistory,
+      submittingReview,
+      newReviewForm,
       openStockReviewHistory,
+      submitNewReview,
       updateReviewDate
     }
   }
