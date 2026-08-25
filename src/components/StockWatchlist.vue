@@ -114,9 +114,10 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="310" fixed="right">
+        <el-table-column label="操作" width="360" fixed="right">
           <template #default="scope">
             <el-button size="small" type="primary" plain @click="openStockReviewHistory(scope.row)">笔记</el-button>
+            <el-button size="small" type="info" plain @click="openSingleStockTradeReview(scope.row)">复盘</el-button>
             <el-button size="small" type="warning" plain @click="openAddTradeModal(scope.row)">买卖</el-button>
             <el-button size="small" type="success" plain @click="calculateFCF(scope.row)"
               :loading="scope.row.fcfLoading">FCF</el-button>
@@ -288,8 +289,8 @@
     </el-dialog>
 
     <!-- 交易复盘记录抽屉 -->
-    <el-drawer v-model="showTradeReviewDrawer" title="交易复盘历史" size="60%">
-      <el-table :data="tradeRecords" style="width: 100%" max-height="800">
+    <el-drawer v-model="showTradeReviewDrawer" :title="filterStockForTrades ? `${filterStockForTrades.name} - 交易复盘` : '全局交易复盘历史'" size="60%">
+      <el-table :data="filteredTradeRecords" style="width: 100%" max-height="800">
         <el-table-column prop="trade_date" label="日期" width="100"></el-table-column>
         <el-table-column prop="name" label="名称" width="100"></el-table-column>
         <el-table-column label="操作" width="80">
@@ -352,7 +353,25 @@
         </el-table-column>
         <el-table-column prop="content" label="复盘内容">
           <template #default="scope">
-            <div style="white-space: pre-wrap; line-height: 1.6; padding: 5px 0;">{{ scope.row.content }}</div>
+            <div v-if="editingReviewId === scope.row.review_id">
+              <el-input 
+                type="textarea" 
+                :rows="3" 
+                v-model="scope.row.editContent" 
+              />
+              <div style="margin-top: 8px; text-align: right;">
+                <el-button size="small" type="primary" @click="saveEditReview(scope.row)" :loading="savingEditReview">保存</el-button>
+                <el-button size="small" @click="cancelEditReview(scope.row)">取消</el-button>
+              </div>
+            </div>
+            <div v-else style="white-space: pre-wrap; line-height: 1.6; padding: 5px 0;">
+              {{ scope.row.content }}
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="60" fixed="right">
+          <template #default="scope">
+            <el-button v-if="editingReviewId !== scope.row.review_id" size="small" type="primary" link icon="Edit" @click="startEditReview(scope.row)"></el-button>
           </template>
         </el-table-column>
         <template #empty>
@@ -403,6 +422,11 @@ export default {
     // 交易记录
     const showTradeReviewDrawer = ref(false)
     const tradeRecords = ref([])
+    const filterStockForTrades = ref(null)
+    const filteredTradeRecords = computed(() => {
+      if (!filterStockForTrades.value) return tradeRecords.value
+      return tradeRecords.value.filter(t => t.name === filterStockForTrades.value.name || t.code === filterStockForTrades.value.code)
+    })
     const showAddTradeModal = ref(false)
     const currentTradeStock = ref(null)
     const newTradeForm = ref({
@@ -424,6 +448,8 @@ export default {
       date: new Date().toISOString().split('T')[0],
       content: ''
     })
+    const editingReviewId = ref(null)
+    const savingEditReview = ref(false)
 
     // 初始化数据
     const loadData = async () => {
@@ -768,6 +794,13 @@ export default {
     }
 
     const openTradeReview = async () => {
+      filterStockForTrades.value = null
+      await loadTrades()
+      showTradeReviewDrawer.value = true
+    }
+
+    const openSingleStockTradeReview = async (stock) => {
+      filterStockForTrades.value = stock
       await loadTrades()
       showTradeReviewDrawer.value = true
     }
@@ -858,6 +891,33 @@ export default {
       }
     }
 
+    const startEditReview = (row) => {
+      row.editContent = row.content
+      editingReviewId.value = row.review_id
+    }
+
+    const cancelEditReview = () => {
+      editingReviewId.value = null
+    }
+
+    const saveEditReview = async (row) => {
+      if (!row.editContent.trim()) {
+        ElMessage.warning('笔记内容不能为空')
+        return
+      }
+      savingEditReview.value = true
+      try {
+        await reviewsApi.saveStockReview(currentReviewStock.value.id, row.review_date, row.editContent)
+        ElMessage.success('笔记已更新')
+        row.content = row.editContent
+        editingReviewId.value = null
+      } catch (e) {
+        ElMessage.error('更新失败: ' + e.message)
+      } finally {
+        savingEditReview.value = false
+      }
+    }
+
     onMounted(async () => {
       loadData()
       loadTags()
@@ -911,10 +971,13 @@ export default {
 
       showTradeReviewDrawer,
       tradeRecords,
+      filterStockForTrades,
+      filteredTradeRecords,
       showAddTradeModal,
       currentTradeStock,
       newTradeForm,
       openTradeReview,
+      openSingleStockTradeReview,
       openAddTradeModal,
       submitTrade,
       deleteTradeRecord,
@@ -924,9 +987,14 @@ export default {
       stockReviewHistory,
       submittingReview,
       newReviewForm,
+      editingReviewId,
+      savingEditReview,
       openStockReviewHistory,
       submitNewReview,
-      updateReviewDate
+      updateReviewDate,
+      startEditReview,
+      cancelEditReview,
+      saveEditReview
     }
   }
 }
