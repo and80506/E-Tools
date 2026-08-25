@@ -116,6 +116,7 @@
 
         <el-table-column label="操作" width="310" fixed="right">
           <template #default="scope">
+            <el-button size="small" type="primary" plain @click="openStockReviewHistory(scope.row)">笔记</el-button>
             <el-button size="small" type="warning" plain @click="openAddTradeModal(scope.row)">买卖</el-button>
             <el-button size="small" type="success" plain @click="calculateFCF(scope.row)"
               :loading="scope.row.fcfLoading">FCF</el-button>
@@ -313,13 +314,40 @@
         </el-table-column>
       </el-table>
     </el-drawer>
+
+    <!-- 个股复盘历史抽屉 -->
+    <el-drawer v-model="showStockReviewDrawer" :title="(currentReviewStock?.name || '') + ' - 历史复盘'" size="50%">
+      <el-table :data="stockReviewHistory" style="width: 100%" max-height="800">
+        <el-table-column label="日期" width="160">
+          <template #default="scope">
+            <el-date-picker 
+              v-model="scope.row.review_date" 
+              type="date" 
+              size="small" 
+              value-format="YYYY-MM-DD" 
+              style="width: 130px"
+              @change="updateReviewDate(scope.row)"
+              :clearable="false"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column prop="content" label="复盘内容">
+          <template #default="scope">
+            <div style="white-space: pre-wrap; line-height: 1.6; padding: 5px 0;">{{ scope.row.content }}</div>
+          </template>
+        </el-table-column>
+        <template #empty>
+          <el-empty description="暂无复盘记录" />
+        </template>
+      </el-table>
+    </el-drawer>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { stocksApi, tagsApi } from '../api/stocks'
+import { tagsApi, stocksApi, reviewsApi } from '../api/stocks'
 
 export default {
   name: 'StockWatchlist',
@@ -361,12 +389,17 @@ export default {
     const newTradeForm = ref({
       trade_date: new Date().toISOString().split('T')[0],
       type: 'buy',
-      quantity: null,
+      quantity: 100,
       unit: '股',
       reason: '',
       return_rate: '',
       notes: ''
     })
+
+    // 个股复盘历史
+    const showStockReviewDrawer = ref(false)
+    const currentReviewStock = ref(null)
+    const stockReviewHistory = ref([])
 
     // 初始化数据
     const loadData = async () => {
@@ -720,7 +753,7 @@ export default {
       newTradeForm.value = {
         trade_date: new Date().toISOString().split('T')[0],
         type: 'buy',
-        quantity: null,
+        quantity: 100,
         unit: '股',
         reason: '',
         return_rate: '',
@@ -752,13 +785,36 @@ export default {
       if (!(await ElMessageBox.confirm('确认删除该条交易记录？', '提示', { type: 'warning' }).catch(() => false))) return
       try {
         await stocksApi.deleteTrade(id)
-        loadTrades()
-      } catch (e) {
-        ElMessage.error('删除失败: ' + e.message)
+        await loadTrades()
+        ElMessage.success('删除成功')
+      } catch (err) {
+        ElMessage.error('删除失败: ' + err.message)
       }
     }
 
-    onMounted(() => {
+    const openStockReviewHistory = async (stock) => {
+      try {
+        currentReviewStock.value = stock
+        stockReviewHistory.value = await reviewsApi.getStockReviews(stock.id)
+        showStockReviewDrawer.value = true
+      } catch (err) {
+        ElMessage.error('加载个股复盘历史失败: ' + err.message)
+      }
+    }
+
+    const updateReviewDate = async (row) => {
+      try {
+        await reviewsApi.updateStockReviewDate(row.review_id, row.review_date)
+        ElMessage.success('日期已修改')
+        stockReviewHistory.value = await reviewsApi.getStockReviews(currentReviewStock.value.id)
+      } catch (err) {
+        ElMessage.error(err.message)
+        // 回滚重载
+        stockReviewHistory.value = await reviewsApi.getStockReviews(currentReviewStock.value.id)
+      }
+    }
+
+    onMounted(async () => {
       loadData()
       loadTags()
     })
@@ -817,7 +873,13 @@ export default {
       openTradeReview,
       openAddTradeModal,
       submitTrade,
-      deleteTradeRecord
+      deleteTradeRecord,
+
+      showStockReviewDrawer,
+      currentReviewStock,
+      stockReviewHistory,
+      openStockReviewHistory,
+      updateReviewDate
     }
   }
 }

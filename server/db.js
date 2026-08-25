@@ -532,6 +532,54 @@ const dbService = {
     }
   },
 
+  updateStockReviewDate(review_id, new_date) {
+    if (!useJsonFallback) {
+      try {
+        return db.prepare('UPDATE stock_reviews SET review_date = ? WHERE id = ?').run(new_date, review_id).changes;
+      } catch (err) {
+        if (err.message.includes('UNIQUE constraint failed')) {
+          throw new Error('该日期已存在复盘记录，不可重复');
+        }
+        throw err;
+      }
+    } else {
+      const reviews = readJsonStockReviews();
+      const idx = reviews.findIndex(r => r.id === review_id);
+      if (idx !== -1) {
+        const stock_id = reviews[idx].stock_id;
+        const exists = reviews.some(r => r.stock_id === stock_id && r.review_date === new_date && r.id !== review_id);
+        if (exists) {
+          throw new Error('该日期已存在复盘记录，不可重复');
+        }
+        reviews[idx].review_date = new_date;
+        writeJsonStockReviews(reviews);
+        return 1;
+      }
+      return 0;
+    }
+  },
+
+  getReviewsByStockId(stock_id) {
+    if (!useJsonFallback) {
+      return db.prepare(`
+        SELECT id as review_id, review_date, content 
+        FROM stock_reviews 
+        WHERE stock_id = ? 
+        ORDER BY review_date DESC
+      `).all(stock_id);
+    } else {
+      const reviews = readJsonStockReviews();
+      return reviews
+        .filter(r => r.stock_id === stock_id)
+        .map(r => ({
+          review_id: r.id,
+          review_date: r.review_date,
+          content: r.content
+        }))
+        .sort((a, b) => b.review_date.localeCompare(a.review_date));
+    }
+  },
+
   // ---------------- 交易复盘 API ---------------- //
   getTradeRecords() {
     if (!useJsonFallback) {

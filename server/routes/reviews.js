@@ -46,6 +46,18 @@ router.get('/stock/:date', (req, res) => {
   }
 });
 
+// 修改某条复盘的日期
+router.put('/stock/date/:review_id', (req, res) => {
+  try {
+    const review_id = parseInt(req.params.review_id, 10);
+    const { date } = req.body;
+    dbService.updateStockReviewDate(review_id, date);
+    res.json({ success: true, message: '复盘日期已修改' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 保存某个股票在某日的复盘
 router.put('/stock/:stock_id/:date', (req, res) => {
   try {

@@ -248,5 +248,19 @@ export const reviewsApi = {
       method: 'PUT',
       body: JSON.stringify({ content })
     });
+  },
+
+  // 获取某个股票的所有复盘历史
+  async getStockReviews(stockId) {
+    const res = await request(`/stocks/${stockId}/reviews`);
+    return res.data || [];
+  },
+
+  // 修改复盘日期
+  async updateStockReviewDate(reviewId, date) {
+    return await request(`/reviews/stock/date/${reviewId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ date })
+    });
   }
 };

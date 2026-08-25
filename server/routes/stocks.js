@@ -244,6 +244,17 @@ router.get('/stocks/:code/fcf', async (req, res) => {
   }
 });
 
+// 获取某个股票的历史所有复盘记录
+router.get('/stocks/:id/reviews', (req, res) => {
+  try {
+    const stockId = parseInt(req.params.id, 10);
+    const reviews = dbService.getReviewsByStockId(stockId);
+    res.json({ success: true, data: reviews });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ================== 交易复盘 API ==================
 
 // 获取所有交易记录
