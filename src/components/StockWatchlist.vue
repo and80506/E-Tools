@@ -27,7 +27,6 @@
           <el-button type="default" @click="toggleBulkPanel">
             批量导入 / 导出
           </el-button>
-          <el-button type="danger" plain @click="resetToDefault">恢复默认</el-button>
           <el-button type="primary" @click="showAddModal = true">
             新增自选股
           </el-button>
@@ -688,18 +687,6 @@ export default {
       document.body.removeChild(link)
     }
 
-    const resetToDefault = async () => {
-      if (await ElMessageBox.confirm('确认恢复默认自选股？这会覆盖现有列表。', '提示', { type: 'warning' }).catch(() => false)) {
-        try {
-          const res = await stocksApi.resetToDefault()
-          ElMessage.error(res.message)
-          await loadData()
-        } catch (e) {
-          ElMessage.error(`恢复失败: ${e.message}`)
-        }
-      }
-    }
-
     // --- 标签管理逻辑 ---
     const openTagManager = () => {
       showTagManagerModal.value = true
@@ -943,7 +930,6 @@ export default {
       handleFileChange,
       toggleBulkPanel,
       showDeleteModal,
-      resetToDefault,
       deleteStock,
       deleteSelected,
       closeAddModal,
