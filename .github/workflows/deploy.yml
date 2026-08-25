@@ -36,10 +36,10 @@ jobs:
       - name: Build Demo
         # 设置 VITE_DEMO_MODE=true 以开启前端 mock 拦截
         # 写入 .env 确保被 Vite 1.x 正确读取
-        # 设置 --base=/E-Tools/ 适配 GitHub Pages 的默认路径格式
+        # 设置 --base=/Value-Invest-Sys/ 适配 GitHub Pages 的默认路径格式
         run: |
           echo "VITE_DEMO_MODE=true" > .env
-          npm run build -- --base=/E-Tools/
+          npm run build -- --base=/Value-Invest-Sys/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

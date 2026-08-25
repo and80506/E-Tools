@@ -14,7 +14,7 @@
 3. 启动成功后，黑色命令行窗口会显示类似如下的访问地址：
    ```
    =============================================================
-      ANTIGRAVITY 金融投资工具箱 (e-tools) 局域网服务已启动
+      ANTIGRAVITY 金融投资工具箱 (Value-Invest-Sys) 局域网服务已启动
    =============================================================
     > 本机访问地址:    http://localhost:3000
     > 局域网 IP 访问:
@@ -34,7 +34,7 @@
 2. 右键点击“命令提示符” -> 选择 **“以管理员身份运行”**。
 3. 复制并粘贴以下命令后按回车：
    ```cmd
-   netsh advfirewall firewall add rule name="Allow e-tools Port 3000" dir=in action=allow protocol=TCP localport=3000
+   netsh advfirewall firewall add rule name="Allow Value-Invest-Sys Port 3000" dir=in action=allow protocol=TCP localport=3000
    ```
 4. 看到“确定”后，防火墙即已放行。手机重新刷新即可访问。
 
@@ -43,13 +43,13 @@
 2. 进入 `系统和安全` -> `Windows Defender 防火墙` -> 左侧点击 `高级设置`。
 3. 点击左侧的 `入站规则`，然后点击右侧的 `新建规则...`。
 4. 选择 `端口` -> 下一步 -> `TCP`，特定本地端口输入 `3000` -> 下一步。
-5. 选择 `允许连接` -> 勾选所有网络类型 -> 名称填 `e-tools 3000` -> 完成。
+5. 选择 `允许连接` -> 勾选所有网络类型 -> 名称填 `Value-Invest-Sys 3000` -> 完成。
 
 ---
 
 ## ⚙️ 如何设置后台常驻或开机自启 (进阶)
 
-如果您希望这台 Windows 电脑一开机就在后台默默运行 e-tools 服务，而不需要一直开着黑色的 `start.bat` 窗口，可以使用 **PM2**：
+如果您希望这台 Windows 电脑一开机就在后台默默运行 Value-Invest-Sys 服务，而不需要一直开着黑色的 `start.bat` 窗口，可以使用 **PM2**：
 
 1. 在项目文件夹地址栏输入 `cmd`，按回车打开命令行。
 2. 安装全局 PM2：
@@ -58,7 +58,7 @@
    ```
 3. 使用 PM2 启动服务：
    ```cmd
-   pm2 start server/index.js --name "e-tools"
+   pm2 start server/index.js --name "Value-Invest-Sys"
    ```
 4. （可选）设置开机自启：
    安装 `pm2-windows-startup` 工具：
@@ -75,4 +75,4 @@
 
 - **数据位置**：所有的自选股和设置数据均保存在 `data/etools.db`（SQLite数据库文件）中。（如果在某些极端无原生编译环境的 Windows 上，会自动降级保存在 `data/stocks.json` 中）。
 - **如何备份**：只需定期复制 `data/` 文件夹即可。
-- **如何迁移**：将整个 `e-tools` 文件夹拷贝到新电脑，双击 `start.bat` 即可，您的数据会完好无损地跟着迁移。
+- **如何迁移**：将整个 `Value-Invest-Sys` 文件夹拷贝到新电脑，双击 `start.bat` 即可，您的数据会完好无损地跟着迁移。

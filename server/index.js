@@ -55,7 +55,7 @@ if (fs.existsSync(distPath)) {
       <html lang="zh-CN">
       <head>
         <meta charset="UTF-8">
-        <title>ANTIGRAVITY e-tools 服务已启动</title>
+        <title>ANTIGRAVITY Value-Invest-Sys 服务已启动</title>
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
           .card { background: #1e293b; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); max-width: 500px; border: 1px solid #334155; }
@@ -96,7 +96,7 @@ function getNetworkIpv4Addresses() {
 app.listen(PORT, HOST, () => {
   const localIps = getNetworkIpv4Addresses();
   console.log('\n=============================================================');
-  console.log('   ANTIGRAVITY 金融投资工具箱 (e-tools) 局域网服务已启动');
+  console.log('   ANTIGRAVITY 金融投资工具箱 (Value-Invest-Sys) 局域网服务已启动');
   console.log('=============================================================');
   console.log(` > 本机访问地址:    http://localhost:${PORT}`);
   console.log(` > 局域网 IP 访问:`);

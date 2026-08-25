@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "======================================="
-echo "  启动 ANTIGRAVITY e-tools (Mac/Linux)"
+echo "  启动 ANTIGRAVITY Value-Invest-Sys (Mac/Linux)"
 echo "======================================="
 echo ""
 

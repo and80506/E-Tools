@@ -1,4 +1,4 @@
-# E-Tools 金融投资工具箱
+# Value-Invest-Sys 金融投资工具箱
 
 > 一个极简而强大的个人金融投资管理与复盘工具箱，支持局域网部署。集成了自选股管理、复盘笔记、复利计算与公司估值等核心功能，帮助您在波动的市场中保持纪律，沉淀策略。
 
@@ -7,14 +7,14 @@
 [![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=nodedotjs)](https://nodejs.org/)
 [![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite)](https://www.sqlite.org/)
 
-**[🚀 在线演示 Demo](https://and80506.github.io/E-Tools/)**
+**[🚀 在线演示 Demo](https://and80506.github.io/Value-Invest-Sys/)**
 > *💡 提示：在线演示版由于无后端服务支撑，采用了纯前端模拟数据，您在页面中的任何操作修改不会被真正持久化，请随意点击体验界面的各项交互功能。*
 
 ---
 
 ## 项目简介
 
-E-Tools 是一款专为个人投资者设计的工具箱，主要用于本地局域网环境下的投资辅助与复盘管理。无论您是价值投资者还是趋势交易者，都可以通过本工具记录投资日常、进行财务演算，进而构建属于自己的交易系统。所有数据默认基于 SQLite 存储于本地，充分保障投资隐私。
+Value-Invest-Sys 是一款专为个人投资者设计的工具箱，主要用于本地局域网环境下的投资辅助与复盘管理。无论您是价值投资者还是趋势交易者，都可以通过本工具记录投资日常、进行财务演算，进而构建属于自己的交易系统。所有数据默认基于 SQLite 存储于本地，充分保障投资隐私。
 
 ---
 
@@ -62,8 +62,8 @@ E-Tools 是一款专为个人投资者设计的工具箱，主要用于本地局
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/your-username/e-tools.git
-cd e-tools
+git clone https://github.com/your-username/Value-Invest-Sys.git
+cd Value-Invest-Sys
 
 # 2. 安装服务端与前端依赖
 npm install
@@ -83,7 +83,7 @@ npm run seed:reviews  # 导入全局复盘笔记测试数据
 ## 项目结构
 
 ```text
-e-tools/
+Value-Invest-Sys/
 ├── server/               # 后端 Express API 服务
 │   ├── index.js          # 服务入口
 │   ├── db.js             # SQLite 数据库服务

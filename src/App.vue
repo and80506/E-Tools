@@ -5,7 +5,7 @@
         <div class="sidebar-header">
           <h1 class="logo">
             <span class="logo-icon">📊</span>
-            <span class="logo-text">E-Tools</span>
+            <span class="logo-text">Value-Invest-Sys</span>
           </h1>
         </div>
 
@@ -63,11 +63,18 @@
       <el-container>
         <el-header class="top-header" height="60px">
           <div class="header-content">
-            <h2 class="page-title">{{ viewTitle }}</h2>
-            <div class="server-status"
+            <h2 class="page-title">
+              {{ viewTitle }}
+              <el-tag v-if="isDemo" type="warning" effect="dark" size="small" style="margin-left: 10px; vertical-align: middle;">演示模式</el-tag>
+            </h2>
+            <div v-if="!isDemo" class="server-status"
               :class="{ 'status-ok': serverStatus === 'online', 'status-error': serverStatus !== 'online' }">
               <span class="status-dot"></span>
               {{ serverStatus === 'online' ? '局域网数据服务 (SQLite) 在线' : '局域网服务连接异常' }}
+            </div>
+            <div v-else class="server-status status-ok" style="color: #e6a23c;">
+              <span class="status-dot" style="background-color: #e6a23c; box-shadow: 0 0 8px #e6a23c;"></span>
+              当前为体验演示环境，操作仅产生模拟数据，刷新页面后将重置
             </div>
           </div>
         </el-header>
@@ -102,6 +109,7 @@ export default {
     const route = useRoute()
     const serverStatus = ref('connecting')
     const currentTime = ref('')
+    const isDemo = import.meta.env && import.meta.env.VITE_DEMO_MODE === 'true';
 
     const viewTitle = computed(() => {
       const path = route.path
@@ -145,7 +153,8 @@ export default {
       locale: zhCn,
       viewTitle,
       currentTime,
-      serverStatus
+      serverStatus,
+      isDemo
     }
   }
 }
