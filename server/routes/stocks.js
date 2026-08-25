@@ -113,4 +113,135 @@ router.put('/stocks/:id/tags', (req, res) => {
   }
 });
 
+// ================== FCF 计算 ==================
+
+// 辅助函数：根据代码获取 secid (1开头是沪市，0开头是深市)
+function getSecId(code) {
+  const upperCode = String(code).toUpperCase();
+  if (upperCode.startsWith('SH')) {
+    return '1.' + upperCode.substring(2);
+  } else if (upperCode.startsWith('SZ') || upperCode.startsWith('BJ')) {
+    return '0.' + upperCode.substring(2);
+  }
+  // 回退逻辑，根据数字判断
+  let num = upperCode.replace(/[^0-9]/g, '');
+  if (num.startsWith('6')) return '1.' + num;
+  return '0.' + num;
+}
+
+// 获取股票 TTM 企业自由现金流 / 股权市值
+router.get('/stocks/:code/fcf', async (req, res) => {
+  try {
+    const rawCode = req.params.code;
+    const secid = getSecId(rawCode);
+    const numCode = rawCode.replace(/[^0-9]/g, '');
+
+    // 1. 获取总市值
+    let marketCap = null;
+    try {
+      const mcUrl = `http://push2.eastmoney.com/api/qt/stock/get?ut=fa5fd1943c7b386f172d6893dbfba10b&fltt=2&invt=2&fields=f116&secid=${secid}`;
+      const mcRes = await fetch(mcUrl);
+      const mcJson = await mcRes.json();
+      if (mcJson && mcJson.data && mcJson.data.f116) {
+        marketCap = parseFloat(mcJson.data.f116);
+      }
+    } catch (e) {
+      console.error('获取市值失败', e);
+    }
+
+    if (!marketCap) {
+      return res.status(400).json({ success: false, message: '未能获取到该股票的总市值数据' });
+    }
+
+    // 2. 获取最近4个季度的财报日期 (现金流量表)
+    const datesUrl = `http://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/xjllbDateAjaxNew?companyType=4&reportDateType=0&code=${secid.startsWith('1.') ? 'SH' : 'SZ'}${numCode}`;
+    const datesRes = await fetch(datesUrl, {
+      headers: {
+        'Referer': `http://emweb.securities.eastmoney.com/pc_hsf10/pages/index.html?type=web&code=${secid.startsWith('1.') ? 'SH' : 'SZ'}${numCode}`,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    const datesJson = await datesRes.json();
+    if (!datesJson || !datesJson.data || datesJson.data.length < 4) {
+      return res.status(400).json({ success: false, message: '未能获取到最近4个季度的现金流量表数据' });
+    }
+
+    // 取需要的报告期日期：最新、去年年报、去年同期
+    const latestDateStr = datesJson.data[0].REPORT_DATE;
+    const latestDateObj = new Date(latestDateStr);
+    const latestYear = latestDateObj.getFullYear();
+    const isQ4 = latestDateStr.includes('-12-31');
+    
+    // 去年年报
+    const lastYearAnnualStr = `${latestYear - 1}-12-31 00:00:00`;
+    // 去年同期
+    const lastYearSamePeriodStr = `${latestYear - 1}-${latestDateStr.substring(5)}`;
+
+    let requiredDates = [latestDateStr];
+    if (!isQ4) {
+      requiredDates.push(lastYearAnnualStr);
+      requiredDates.push(lastYearSamePeriodStr);
+    }
+    
+    // 取前 N 个报告期的日期参数格式化
+    const datesParam = requiredDates.map(d => d.split(' ')[0]).join('%2C');
+
+    // 3. 获取数据
+    const dataUrl = `http://emweb.securities.eastmoney.com/PC_HSF10/NewFinanceAnalysis/xjllbAjaxNew?companyType=4&reportDateType=0&reportType=1&dates=${datesParam}&code=${secid.startsWith('1.') ? 'SH' : 'SZ'}${numCode}`;
+    const dataRes = await fetch(dataUrl, {
+      headers: {
+        'Referer': `http://emweb.securities.eastmoney.com/pc_hsf10/pages/index.html?type=web&code=${secid.startsWith('1.') ? 'SH' : 'SZ'}${numCode}`,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    const dataJson = await dataRes.json();
+    if (!dataJson || !dataJson.data || dataJson.data.length === 0) {
+      return res.status(400).json({ success: false, message: '未能获取到财务数据详情' });
+    }
+
+    const dataMap = {};
+    dataJson.data.forEach(item => {
+      dataMap[item.REPORT_DATE] = {
+        operate: parseFloat(item.NETCASH_OPERATE || 0),
+        capex: parseFloat(item.CONSTRUCT_LONG_ASSET || 0)
+      };
+    });
+
+    let opSum = 0;
+    let capexSum = 0;
+
+    if (isQ4) {
+      opSum = dataMap[latestDateStr]?.operate || 0;
+      capexSum = dataMap[latestDateStr]?.capex || 0;
+    } else {
+      const current = dataMap[latestDateStr] || { operate: 0, capex: 0 };
+      const lastAnnual = dataMap[lastYearAnnualStr] || { operate: 0, capex: 0 };
+      const lastSame = dataMap[lastYearSamePeriodStr] || { operate: 0, capex: 0 };
+      
+      opSum = current.operate + lastAnnual.operate - lastSame.operate;
+      capexSum = current.capex + lastAnnual.capex - lastSame.capex;
+    }
+
+    const fcf = opSum - capexSum;
+    const fcfYield = (fcf / marketCap) * 100;
+
+    res.json({
+      success: true,
+      data: {
+        operatingCashFlow: opSum,
+        capex: capexSum,
+        fcf: fcf,
+        marketCap: marketCap,
+        fcfYield: fcfYield,
+        quarters: 4
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: '计算FCF时发生服务器错误: ' + err.message });
+  }
+});
+
 module.exports = router;

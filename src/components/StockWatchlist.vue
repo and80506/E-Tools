@@ -4,29 +4,21 @@
     <el-card shadow="never" class="action-bar-card" style="margin-bottom: 20px;">
       <el-row :gutter="20" align="middle" justify="space-between">
         <el-col :span="10">
-          <el-input
-            v-model="searchQuery"
-            placeholder="搜索股票代码或名称..."
-            clearable
-            style="width: 200px; margin-right: 15px;"
-          >
+          <el-input v-model="searchQuery" placeholder="搜索股票代码或名称..." clearable
+            style="width: 200px; margin-right: 15px;">
           </el-input>
-          
+
           <el-select v-model="selectedTagFilter" placeholder="筛选标签" clearable style="width: 150px;">
             <el-option label="全部标签" value="" />
             <el-option v-for="t in allTags" :key="t.id" :label="t.name" :value="t.id" />
           </el-select>
         </el-col>
-        
+
         <el-col :span="14" style="text-align: right;">
           <el-button type="info" plain @click="openTagManager">
             标签管理
           </el-button>
-          <el-button 
-            v-if="selectedIds?.length > 0" 
-            type="danger" 
-            @click="showDeleteModal = true"
-          >
+          <el-button v-if="selectedIds?.length > 0" type="danger" @click="showDeleteModal = true">
             批量删除 (已选 {{ selectedIds?.length || 0 }} 只)
           </el-button>
           <el-button type="default" @click="toggleBulkPanel">
@@ -52,34 +44,27 @@
         <el-row :gutter="40">
           <el-col :span="12">
             <h4>方式一：纯文本快捷操作</h4>
-            <p style="font-size: 13px; color: #909399; margin-bottom: 15px;">格式：每一行代表一只股票，支持空格、制表符或逗号分隔。如：<code>600519 贵州茅台</code></p>
-            <el-input
-              v-model="bulkText"
-              type="textarea"
-              :rows="4"
-              placeholder="粘贴股票列表到此处，或点击下方“生成当前列表文本”进行导出"
-            />
+            <p style="font-size: 13px; color: #909399; margin-bottom: 15px;">格式：每一行代表一只股票，支持空格、制表符或逗号分隔。如：<code>600519
+        贵州茅台</code></p>
+            <el-input v-model="bulkText" type="textarea" :rows="4" placeholder="粘贴股票列表到此处，或点击下方“生成当前列表文本”进行导出" />
             <div style="margin-top: 15px; text-align: right;">
               <el-button type="primary" size="small" @click="importText">确认文本导入</el-button>
               <el-button type="default" size="small" @click="exportText">生成当前列表文本</el-button>
             </div>
           </el-col>
-          
+
           <el-col :span="12">
             <h4>方式二：Excel (CSV) 文件操作</h4>
-            <p style="font-size: 13px; color: #909399; margin-bottom: 15px;">通过标准的 CSV（逗号分隔值）文件实现与 Excel 互通。文件编码建议为 UTF-8。</p>
-            
+            <p style="font-size: 13px; color: #909399; margin-bottom: 15px;">通过标准的 CSV（逗号分隔值）文件实现与 Excel 互通。文件编码建议为
+              UTF-8。</p>
+
             <div style="margin-bottom: 15px;">
-              <el-upload
-                action="#"
-                :auto-upload="false"
-                :show-file-list="false"
-                accept=".csv"
-                :on-change="handleFileChange"
-              >
+              <el-upload action="#" :auto-upload="false" :show-file-list="false" accept=".csv"
+                :on-change="handleFileChange">
                 <el-button type="default">选择并导入 CSV 文件</el-button>
               </el-upload>
-              <span v-if="csvFileName" style="margin-left: 10px; font-size: 13px; color: #67c23a;">已选: {{ csvFileName }}</span>
+              <span v-if="csvFileName" style="margin-left: 10px; font-size: 13px; color: #67c23a;">已选: {{ csvFileName
+              }}</span>
             </div>
 
             <div>
@@ -92,58 +77,49 @@
 
     <!-- 股票列表表格 -->
     <el-card shadow="never" class="table-card" :body-style="{ padding: '0px' }">
-      <el-table 
-        v-loading="loading" 
-        :data="filteredStocks" 
-        style="width: 100%"
-        @selection-change="handleSelectionChange"
-      >
+      <el-table v-loading="loading" :data="filteredStocks" style="width: 100%"
+        @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column type="index" label="序号" width="70" align="center" />
         <el-table-column prop="code" label="股票代码" width="120">
           <template #default="scope">
-            <el-link 
-              :href="`https://quote.eastmoney.com/${scope.row.code}.html`" 
-              target="_blank" 
-              type="primary" 
-              style="font-weight: 600;"
-            >
+            <el-link :href="`https://quote.eastmoney.com/${scope.row.code}.html`" target="_blank" type="primary"
+              style="font-weight: 600;">
               {{ scope.row.code }}
             </el-link>
           </template>
         </el-table-column>
         <el-table-column prop="name" label="股票名称" width="150" />
-        
+
         <el-table-column label="标签">
           <template #default="scope">
-            <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;" @click="openStockTagsModal(scope.row)">
-              <el-tag 
-                v-for="t in scope.row.tags" 
-                :key="t.id"
-                :color="t.color + '20'"
-                :style="{ color: t.color, borderColor: t.color }"
-                size="small"
-              >
+            <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;"
+              @click="openStockTagsModal(scope.row)">
+              <el-tag v-for="t in scope.row.tags" :key="t.id" :color="t.color + '20'"
+                :style="{ color: t.color, borderColor: t.color }" size="small">
                 {{ t.name }}
               </el-tag>
-              <el-button v-if="(!scope.row.tags || scope.row.tags.length === 0)" size="small" type="primary" link>+ 标签</el-button>
+              <el-button v-if="(!scope.row.tags || scope.row.tags.length === 0)" size="small" type="primary" link>+
+                标签</el-button>
             </div>
           </template>
         </el-table-column>
-        
+
         <el-table-column label="添加日期" width="180">
           <template #default="scope">
             {{ formatDate(scope.row.created_at) }}
           </template>
         </el-table-column>
-        
-        <el-table-column label="操作" width="200" fixed="right">
+
+        <el-table-column label="操作" width="260" fixed="right">
           <template #default="scope">
+            <el-button size="small" type="success" plain @click="calculateFCF(scope.row)"
+              :loading="scope.row.fcfLoading">FCF</el-button>
             <el-button size="small" type="primary" plain @click="openStockTagsModal(scope.row)">设标签</el-button>
             <el-button size="small" type="danger" plain @click="deleteStock(scope.row.id)">删除</el-button>
           </template>
         </el-table-column>
-        
+
         <template #empty>
           <el-empty description="暂无匹配的自选股票，点击右上角“新增自选股”开始。" />
         </template>
@@ -181,20 +157,28 @@
 
     <!-- 标签全局管理模态框 -->
     <el-dialog v-model="showTagManagerModal" title="🏷️ 标签管理" width="500px">
-      <div v-if="allTags?.length === 0" style="text-align: center; color: #909399; margin-bottom: 20px;">暂无标签，请在下方新增</div>
-      <div v-else style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 300px; overflow-y: auto;">
-        <div v-for="tag in allTags" :key="tag.id" style="display: flex; align-items: center; justify-content: space-between;">
+      <div v-if="allTags?.length === 0" style="text-align: center; color: #909399; margin-bottom: 20px;">暂无标签，请在下方新增
+      </div>
+      <div v-else
+        style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; max-height: 300px; overflow-y: auto;">
+        <div v-for="tag in allTags" :key="tag.id"
+          style="display: flex; align-items: center; justify-content: space-between;">
           <div style="display: flex; align-items: center; gap: 10px;">
-            <input type="color" v-model="tag.color" @change="updateTag(tag)" style="border: none; padding: 0; width: 30px; height: 30px; cursor: pointer;" />
-            <el-input v-model="tag.name" @blur="updateTag(tag)" @keyup.enter="updateTag(tag)" size="small" style="width: 150px;"></el-input>
+            <input type="color" v-model="tag.color" @change="updateTag(tag)"
+              style="border: none; padding: 0; width: 30px; height: 30px; cursor: pointer;" />
+            <el-input v-model="tag.name" @blur="updateTag(tag)" @keyup.enter="updateTag(tag)" size="small"
+              style="width: 150px;"></el-input>
           </div>
           <el-button size="small" type="danger" @click="deleteTag(tag.id)">删除</el-button>
         </div>
       </div>
-      
-      <div style="display: flex; gap: 10px; align-items: center; border-top: 1px solid var(--el-border-color-lighter); padding-top: 15px;">
-        <input type="color" v-model="newTagForm.color" style="border: none; padding: 0; width: 30px; height: 30px; cursor: pointer;" />
-        <el-input v-model="newTagForm.name" placeholder="新标签名称..." @keyup.enter="createTag" size="small" style="flex: 1;"></el-input>
+
+      <div
+        style="display: flex; gap: 10px; align-items: center; border-top: 1px solid var(--el-border-color-lighter); padding-top: 15px;">
+        <input type="color" v-model="newTagForm.color"
+          style="border: none; padding: 0; width: 30px; height: 30px; cursor: pointer;" />
+        <el-input v-model="newTagForm.name" placeholder="新标签名称..." @keyup.enter="createTag" size="small"
+          style="flex: 1;"></el-input>
         <el-button type="primary" size="small" @click="createTag">添加</el-button>
       </div>
       <template #footer>
@@ -227,6 +211,37 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- FCF 计算结果模态框 -->
+    <el-dialog v-model="showFcfModal"
+      :title="`TTM 企业自由现金流 / 股权市值计算 - ${currentFcfStock?.name} (${currentFcfStock?.code})`" width="450px">
+      <div v-if="fcfResult" style="line-height: 1.8; font-size: 14px;">
+        <p><strong>TTM 经营现金流净额:</strong> <span style="float: right;">{{ (fcfResult.operatingCashFlow /
+          100000000).toFixed(2) }} 亿元</span></p>
+        <p><strong>TTM 资本支出 (CAPEX):</strong> <span style="float: right;">{{ (fcfResult.capex / 100000000).toFixed(2) }}
+            亿元</span>
+        </p>
+        <el-divider style="margin: 10px 0;" />
+        <p><strong>TTM 自由现金流 (FCFF):</strong> <span style="float: right; color: #67c23a; font-weight: bold;">{{
+          (fcfResult.fcf /
+            100000000).toFixed(2) }} 亿元</span></p>
+        <p><strong>当前总市值:</strong> <span style="float: right;">{{ (fcfResult.marketCap / 100000000).toFixed(2) }}
+            亿元</span>
+        </p>
+        <el-divider style="margin: 10px 0;" />
+        <p style="font-size: 16px;">
+          <strong>TTM 企业自由现金流 / 股权市值:</strong>
+          <span style="float: right; color: #e60012; font-weight: bold; font-size: 18px;">{{
+            fcfResult.fcfYield.toFixed(2)
+          }}%</span>
+        </p>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button type="primary" @click="showFcfModal = false">关闭</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -256,6 +271,10 @@ export default {
     const showStockTagsModal = ref(false)
     const currentTagsStock = ref(null)
     const selectedStockTagIds = ref([])
+
+    const showFcfModal = ref(false)
+    const currentFcfStock = ref(null)
+    const fcfResult = ref(null)
 
     const newStock = ref({
       code: '',
@@ -301,13 +320,13 @@ export default {
       if (!stocks.value || !Array.isArray(stocks.value)) return []
       const q = (searchQuery.value || '').trim().toLowerCase()
       const tFilter = selectedTagFilter.value
-      
+
       return stocks.value.filter(s => {
         const codeStr = String(s.code || '').toLowerCase()
         const nameStr = String(s.name || '').toLowerCase()
         const matchQuery = !q || codeStr.includes(q) || nameStr.includes(q)
         const matchTag = !tFilter || (s.tags && s.tags.some(t => String(t.id) === String(tFilter)))
-        
+
         return matchQuery && matchTag
       })
     })
@@ -575,6 +594,23 @@ export default {
       }
     }
 
+    // --- FCF 计算逻辑 ---
+    const calculateFCF = async (stock) => {
+      stock.fcfLoading = true
+      try {
+        const res = await stocksApi.getFCF(stock.code)
+        if (res.success && res.data) {
+          currentFcfStock.value = stock
+          fcfResult.value = res.data
+          showFcfModal.value = true
+        }
+      } catch (e) {
+        alert(e.message)
+      } finally {
+        stock.fcfLoading = false
+      }
+    }
+
     onMounted(() => {
       loadTags()
       loadData()
@@ -604,7 +640,7 @@ export default {
       deleteStock,
       deleteSelected,
       closeAddModal,
-      
+
       allTags,
       selectedTagFilter,
       showTagManagerModal,
@@ -619,7 +655,12 @@ export default {
       selectedStockTagIds,
       openStockTagsModal,
       closeStockTagsModal,
-      saveStockTags
+      saveStockTags,
+
+      showFcfModal,
+      currentFcfStock,
+      fcfResult,
+      calculateFCF
     }
   }
 }
@@ -751,7 +792,8 @@ export default {
   gap: 12px;
 }
 
-.btn-primary.mini, .btn-secondary.mini {
+.btn-primary.mini,
+.btn-secondary.mini {
   padding: 8px 14px;
   font-size: 12px;
 }
@@ -768,7 +810,7 @@ export default {
   font-size: 14px;
 }
 
-.watchlist-table th, 
+.watchlist-table th,
 .watchlist-table td {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border-glass);
@@ -893,8 +935,15 @@ export default {
 
 /* 动画 */
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-slide-down {

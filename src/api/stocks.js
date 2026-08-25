@@ -155,6 +155,11 @@ export const stocksApi = {
   // 检查服务端连接状态
   async checkStatus() {
     return await request('/system/status');
+  },
+
+  // 获取 FCF 数据
+  async getFCF(code) {
+    return await request(`/stocks/${code}/fcf`);
   }
 };
 
