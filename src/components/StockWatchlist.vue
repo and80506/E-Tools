@@ -79,7 +79,7 @@
 
     <!-- 股票列表表格 -->
     <el-card shadow="never" class="table-card" :body-style="{ padding: '0px' }">
-      <el-table v-loading="loading" :data="filteredStocks" style="width: 100%"
+      <el-table v-loading="loading" :data="paginatedStocks" style="width: 100%"
         @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column type="index" label="序号" width="70" align="center" />
@@ -128,6 +128,17 @@
           <el-empty description="暂无匹配的自选股票，点击右上角“新增自选股”开始。" />
         </template>
       </el-table>
+      <div style="padding: 15px; display: flex; justify-content: flex-end;">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="filteredStocks.length"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
     </el-card>
 
     <!-- 新增自选股 单独添加模态框 -->
@@ -382,7 +393,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { tagsApi, stocksApi, reviewsApi } from '../api/stocks'
 
@@ -398,6 +409,8 @@ export default {
     const bulkText = ref('')
     const csvFileName = ref('')
     const loading = ref(false)
+    const currentPage = ref(1)
+    const pageSize = ref(20)
 
     // 标签系统相关状态
     const allTags = ref([])
@@ -499,6 +512,25 @@ export default {
         return matchQuery && matchTag
       })
     })
+
+    const paginatedStocks = computed(() => {
+      const start = (currentPage.value - 1) * pageSize.value
+      const end = start + pageSize.value
+      return filteredStocks.value.slice(start, end)
+    })
+
+    watch([searchQuery, selectedTagFilter], () => {
+      currentPage.value = 1
+    })
+
+    const handleSizeChange = (val) => {
+      pageSize.value = val
+      currentPage.value = 1
+    }
+
+    const handleCurrentChange = (val) => {
+      currentPage.value = val
+    }
 
     // 全选逻辑 (Element Plus el-table 适用)
     const handleSelectionChange = (val) => {
@@ -920,9 +952,14 @@ export default {
       csvFileName,
       newStock,
       loading,
+      currentPage,
+      pageSize,
       filteredStocks,
+      paginatedStocks,
       addStock,
       handleSelectionChange,
+      handleSizeChange,
+      handleCurrentChange,
       formatDate,
       exportText,
       importText,
