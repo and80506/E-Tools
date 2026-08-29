@@ -284,7 +284,7 @@
           <el-input v-model="newTradeForm.price" placeholder="交易单价 (可选)"></el-input>
         </el-form-item>
         <el-form-item label="原因逻辑">
-          <el-input type="textarea" v-model="newTradeForm.reason" rows="2" placeholder="买入/卖出原因"></el-input>
+          <el-input type="textarea" v-model="newTradeForm.reason" :rows="2" placeholder="买入/卖出原因"></el-input>
         </el-form-item>
         <el-form-item label="收益率">
           <el-input v-model="newTradeForm.return_rate" placeholder="例如: 8.32% 或 清仓收益率39.92%"></el-input>
@@ -336,11 +336,11 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="数量/价格" width="120">
+        <el-table-column label="数量/价格" width="160">
           <template #default="scope">
             <div v-if="editingTradeId === scope.row.id">
               <div style="margin-bottom: 5px; display: flex; gap: 5px;">
-                <el-input-number v-model="scope.row.editQuantity" :min="1" size="small" style="flex: 1;" :controls="false" placeholder="数量"></el-input-number>
+                <el-input v-model="scope.row.editQuantity" type="number" :min="1" size="small" style="flex: 1;" placeholder="数量"></el-input>
                 <el-select v-model="scope.row.editUnit" size="small" style="width: 70px;">
                   <el-option label="股" value="股"></el-option>
                   <el-option label="手" value="手"></el-option>
@@ -359,7 +359,7 @@
         <el-table-column prop="reason" label="原因/逻辑">
           <template #default="scope">
             <div v-if="editingTradeId === scope.row.id">
-              <el-input type="textarea" v-model="scope.row.editReason" rows="2" />
+              <el-input type="textarea" v-model="scope.row.editReason" :rows="2" />
             </div>
             <div v-else>{{ scope.row.reason }}</div>
           </template>
