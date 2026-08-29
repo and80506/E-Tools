@@ -272,7 +272,7 @@
         </el-form-item>
         <el-form-item label="数量">
           <div style="display: flex; gap: 10px;">
-            <el-input-number v-model="newTradeForm.quantity" :min="1" style="flex: 1;"></el-input-number>
+            <el-input-number v-model="newTradeForm.quantity" :min="1" :step="newTradeForm.unit === '股' ? 100 : 1" style="flex: 1;"></el-input-number>
             <el-select v-model="newTradeForm.unit" style="width: 100px;">
               <el-option label="股" value="股"></el-option>
               <el-option label="手" value="手"></el-option>
@@ -315,9 +315,17 @@
         </el-table-column>
         <el-table-column label="数量/价格" width="120">
           <template #default="scope">
-            {{ scope.row.quantity }} {{ scope.row.unit }}
-            <span v-if="scope.row.price" style="color:#e6a23c; font-size:12px;"><br>@ {{ scope.row.price }}</span>
-            <span v-if="scope.row.notes" style="color:#909399; font-size:12px;"><br>({{ scope.row.notes }})</span>
+            <div v-if="editingTradeId === scope.row.id">
+              <div style="margin-bottom: 5px;">
+                <el-input-number v-model="scope.row.editQuantity" :min="1" size="small" style="width: 100%;" :controls="false" placeholder="数量"></el-input-number>
+              </div>
+              <el-input v-model="scope.row.editPrice" size="small" placeholder="价格"></el-input>
+            </div>
+            <div v-else>
+              {{ scope.row.quantity }} {{ scope.row.unit }}
+              <span v-if="scope.row.price" style="color:#e6a23c; font-size:12px;"><br>@ {{ scope.row.price }}</span>
+              <span v-if="scope.row.notes" style="color:#909399; font-size:12px;"><br>({{ scope.row.notes }})</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="reason" label="原因/逻辑">
@@ -901,6 +909,8 @@ export default {
     const startEditTrade = (row) => {
       row.editReason = row.reason
       row.editReturnRate = row.return_rate
+      row.editQuantity = row.quantity
+      row.editPrice = row.price || ''
       editingTradeId.value = row.id
     }
 
@@ -911,11 +921,19 @@ export default {
     const saveEditTrade = async (row) => {
       savingEditTrade.value = true
       try {
-        const payload = { ...row, reason: row.editReason, return_rate: row.editReturnRate }
+        const payload = { 
+          ...row, 
+          reason: row.editReason, 
+          return_rate: row.editReturnRate,
+          quantity: row.editQuantity,
+          price: row.editPrice
+        }
         await stocksApi.updateTrade(row.id, payload)
         ElMessage.success('交易记录已更新')
         row.reason = row.editReason
         row.return_rate = row.editReturnRate
+        row.quantity = row.editQuantity
+        row.price = row.editPrice
         editingTradeId.value = null
       } catch (e) {
         ElMessage.error('更新失败: ' + e.message)
