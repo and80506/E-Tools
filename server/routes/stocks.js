@@ -293,4 +293,19 @@ router.delete('/trades/:id', (req, res) => {
   }
 });
 
+// 更新交易记录
+router.put('/trades/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const updatedRecord = dbService.updateTradeRecord(id, req.body);
+    if (updatedRecord) {
+      res.json({ success: true, data: updatedRecord });
+    } else {
+      res.status(404).json({ success: false, message: '未找到该交易记录' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;
