@@ -303,14 +303,37 @@
 
     <!-- 交易复盘记录抽屉 -->
     <el-drawer v-model="showTradeReviewDrawer" :title="filterStockForTrades ? `${filterStockForTrades.name} - 交易复盘` : '全局交易复盘历史'" size="60%">
+      <div v-if="!filterStockForTrades" style="margin-bottom: 15px; display: flex; gap: 15px;">
+        <el-input v-model="tradeSearchName" placeholder="搜索公司名称或代码..." clearable style="width: 200px;"></el-input>
+        <el-select v-model="tradeSearchType" placeholder="全部操作" clearable style="width: 120px;">
+          <el-option label="全部" value=""></el-option>
+          <el-option label="买入" value="buy"></el-option>
+          <el-option label="卖出" value="sell"></el-option>
+        </el-select>
+      </div>
       <el-table :data="filteredTradeRecords" style="width: 100%" max-height="800">
-        <el-table-column prop="trade_date" label="日期" width="100"></el-table-column>
-        <el-table-column prop="name" label="名称" width="100"></el-table-column>
-        <el-table-column label="操作" width="80">
+        <el-table-column label="日期" width="140">
           <template #default="scope">
-            <el-tag :type="scope.row.type === 'buy' ? 'danger' : 'success'" size="small">
-              {{ scope.row.type === 'buy' ? '买入' : '卖出' }}
-            </el-tag>
+            <div v-if="editingTradeId === scope.row.id">
+              <el-date-picker v-model="scope.row.editTradeDate" type="date" value-format="YYYY-MM-DD" size="small" style="width: 100%;" :clearable="false"></el-date-picker>
+            </div>
+            <div v-else>{{ scope.row.trade_date }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="名称" width="100"></el-table-column>
+        <el-table-column label="操作" width="90">
+          <template #default="scope">
+            <div v-if="editingTradeId === scope.row.id">
+              <el-select v-model="scope.row.editType" size="small" style="width: 100%;">
+                <el-option label="买入" value="buy"></el-option>
+                <el-option label="卖出" value="sell"></el-option>
+              </el-select>
+            </div>
+            <div v-else>
+              <el-tag :type="scope.row.type === 'buy' ? 'danger' : 'success'" size="small">
+                {{ scope.row.type === 'buy' ? '买入' : '卖出' }}
+              </el-tag>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="数量/价格" width="120">
@@ -468,9 +491,22 @@ export default {
     const showTradeReviewDrawer = ref(false)
     const tradeRecords = ref([])
     const filterStockForTrades = ref(null)
+    const tradeSearchName = ref('')
+    const tradeSearchType = ref('')
     const filteredTradeRecords = computed(() => {
-      if (!filterStockForTrades.value) return tradeRecords.value
-      return tradeRecords.value.filter(t => t.name === filterStockForTrades.value.name || t.code === filterStockForTrades.value.code)
+      let result = tradeRecords.value
+      if (filterStockForTrades.value) {
+        result = result.filter(t => t.name === filterStockForTrades.value.name || t.code === filterStockForTrades.value.code)
+      } else {
+        if (tradeSearchName.value) {
+          const q = tradeSearchName.value.trim().toLowerCase()
+          result = result.filter(t => t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q))
+        }
+        if (tradeSearchType.value) {
+          result = result.filter(t => t.type === tradeSearchType.value)
+        }
+      }
+      return result
     })
     const showAddTradeModal = ref(false)
     const currentTradeStock = ref(null)
@@ -907,6 +943,8 @@ export default {
     }
 
     const startEditTrade = (row) => {
+      row.editTradeDate = row.trade_date
+      row.editType = row.type
       row.editReason = row.reason
       row.editReturnRate = row.return_rate
       row.editQuantity = row.quantity
@@ -923,6 +961,8 @@ export default {
       try {
         const payload = { 
           ...row, 
+          trade_date: row.editTradeDate,
+          type: row.editType,
           reason: row.editReason, 
           return_rate: row.editReturnRate,
           quantity: row.editQuantity,
@@ -930,6 +970,8 @@ export default {
         }
         await stocksApi.updateTrade(row.id, payload)
         ElMessage.success('交易记录已更新')
+        row.trade_date = row.editTradeDate
+        row.type = row.editType
         row.reason = row.editReason
         row.return_rate = row.editReturnRate
         row.quantity = row.editQuantity
@@ -1069,6 +1111,8 @@ export default {
       showTradeReviewDrawer,
       tradeRecords,
       filterStockForTrades,
+      tradeSearchName,
+      tradeSearchType,
       filteredTradeRecords,
       showAddTradeModal,
       currentTradeStock,

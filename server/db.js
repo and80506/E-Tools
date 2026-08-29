@@ -633,20 +633,20 @@ const dbService = {
   },
 
   updateTradeRecord(id, trade) {
-    const { quantity, price = null, reason = '', return_rate = '' } = trade;
+    const { trade_date, type, quantity, price = null, reason = '', return_rate = '' } = trade;
     if (!useJsonFallback) {
       const stmt = db.prepare(`
         UPDATE trade_records
-        SET quantity = ?, price = ?, reason = ?, return_rate = ?
+        SET trade_date = ?, type = ?, quantity = ?, price = ?, reason = ?, return_rate = ?
         WHERE id = ?
       `);
-      stmt.run(quantity, price, reason, return_rate, id);
+      stmt.run(trade_date, type, quantity, price, reason, return_rate, id);
       return db.prepare('SELECT * FROM trade_records WHERE id = ?').get(id);
     } else {
       const records = readJsonTradeRecords();
       const index = records.findIndex(r => r.id === parseInt(id));
       if (index === -1) return null;
-      records[index] = { ...records[index], quantity, price, reason, return_rate };
+      records[index] = { ...records[index], trade_date, type, quantity, price, reason, return_rate };
       writeJsonTradeRecords(records);
       return records[index];
     }
