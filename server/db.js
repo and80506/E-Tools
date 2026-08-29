@@ -177,7 +177,7 @@ const dbService = {
   // 获取全部股票列表（带标签）
   getAllStocks() {
     if (!useJsonFallback) {
-      const stocks = db.prepare('SELECT * FROM stocks ORDER BY order_num ASC, id ASC').all();
+      const stocks = db.prepare('SELECT s.*, EXISTS(SELECT 1 FROM trade_records tr WHERE tr.code = s.code LIMIT 1) as has_trades FROM stocks s ORDER BY s.order_num ASC, s.id ASC').all();
       const relations = db.prepare(`
         SELECT st.stock_id, t.id, t.name, t.color 
         FROM stock_tags st 
@@ -205,8 +205,11 @@ const dbService = {
           relationsMap[st.stock_id].push(tagsMap[st.tag_id]);
         }
       });
+      const tradeRecords = readJsonTradeRecords();
+      const tradedCodes = new Set(tradeRecords.map(tr => tr.code.toUpperCase()));
       stocks.forEach(s => {
         s.tags = relationsMap[s.id] || [];
+        s.has_trades = tradedCodes.has(s.code.toUpperCase()) ? 1 : 0;
       });
       return stocks;
     }

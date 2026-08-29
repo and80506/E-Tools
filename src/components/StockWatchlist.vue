@@ -8,10 +8,12 @@
             style="width: 200px; margin-right: 15px;">
           </el-input>
 
-          <el-select v-model="selectedTagFilter" placeholder="筛选标签" clearable style="width: 150px;">
+          <el-select v-model="selectedTagFilter" placeholder="筛选标签" clearable style="width: 150px; margin-right: 15px;">
             <el-option label="全部标签" value="" />
             <el-option v-for="t in allTags" :key="t.id" :label="t.name" :value="t.id" />
           </el-select>
+          
+          <el-switch v-model="showOnlyHasTrades" active-text="仅显示有交易记录" />
         </el-col>
 
         <el-col :span="14" style="text-align: right;">
@@ -493,6 +495,7 @@ export default {
     // 标签系统相关状态
     const allTags = ref([])
     const selectedTagFilter = ref('')
+    const showOnlyHasTrades = ref(false)
     const showTagManagerModal = ref(false)
     const newTagForm = ref({ name: '', color: '#3b82f6' })
 
@@ -628,8 +631,9 @@ export default {
         const nameStr = String(s.name || '').toLowerCase()
         const matchQuery = !q || codeStr.includes(q) || nameStr.includes(q)
         const matchTag = !tFilter || (s.tags && s.tags.some(t => String(t.id) === String(tFilter)))
+        const matchTrades = !showOnlyHasTrades.value || s.has_trades
 
-        return matchQuery && matchTag
+        return matchQuery && matchTag && matchTrades
       })
     })
 
@@ -639,7 +643,7 @@ export default {
       return filteredStocks.value.slice(start, end)
     })
 
-    watch([searchQuery, selectedTagFilter], () => {
+    watch([searchQuery, selectedTagFilter, showOnlyHasTrades], () => {
       currentPage.value = 1
     })
 
@@ -1162,6 +1166,7 @@ export default {
 
       allTags,
       selectedTagFilter,
+      showOnlyHasTrades,
       showTagManagerModal,
       newTagForm,
       openTagManager,
