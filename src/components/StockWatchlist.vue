@@ -339,8 +339,13 @@
         <el-table-column label="数量/价格" width="120">
           <template #default="scope">
             <div v-if="editingTradeId === scope.row.id">
-              <div style="margin-bottom: 5px;">
-                <el-input-number v-model="scope.row.editQuantity" :min="1" size="small" style="width: 100%;" :controls="false" placeholder="数量"></el-input-number>
+              <div style="margin-bottom: 5px; display: flex; gap: 5px;">
+                <el-input-number v-model="scope.row.editQuantity" :min="1" size="small" style="flex: 1;" :controls="false" placeholder="数量"></el-input-number>
+                <el-select v-model="scope.row.editUnit" size="small" style="width: 70px;">
+                  <el-option label="股" value="股"></el-option>
+                  <el-option label="手" value="手"></el-option>
+                  <el-option label="份额" value="份额"></el-option>
+                </el-select>
               </div>
               <el-input v-model="scope.row.editPrice" size="small" placeholder="价格"></el-input>
             </div>
@@ -948,6 +953,7 @@ export default {
       row.editReason = row.reason
       row.editReturnRate = row.return_rate
       row.editQuantity = row.quantity
+      row.editUnit = row.unit || '股'
       row.editPrice = row.price || ''
       editingTradeId.value = row.id
     }
@@ -966,6 +972,7 @@ export default {
           reason: row.editReason, 
           return_rate: row.editReturnRate,
           quantity: row.editQuantity,
+          unit: row.editUnit,
           price: row.editPrice
         }
         await stocksApi.updateTrade(row.id, payload)
@@ -975,6 +982,7 @@ export default {
         row.reason = row.editReason
         row.return_rate = row.editReturnRate
         row.quantity = row.editQuantity
+        row.unit = row.editUnit
         row.price = row.editPrice
         editingTradeId.value = null
       } catch (e) {
