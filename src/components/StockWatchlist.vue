@@ -352,6 +352,7 @@
                 </el-select>
               </div>
               <el-input v-model="scope.row.editPrice" size="small" placeholder="价格"></el-input>
+              <el-input v-model="scope.row.editNotes" size="small" placeholder="额外备注(可选)" style="margin-top: 5px;"></el-input>
             </div>
             <div v-else>
               {{ scope.row.quantity }} {{ scope.row.unit }}
@@ -966,6 +967,7 @@ export default {
       row.editQuantity = row.quantity
       row.editUnit = row.unit || '股'
       row.editPrice = row.price || ''
+      row.editNotes = row.notes || ''
       editingTradeId.value = row.id
     }
 
@@ -984,7 +986,8 @@ export default {
           return_rate: row.editReturnRate,
           quantity: row.editQuantity,
           unit: row.editUnit,
-          price: row.editPrice
+          price: row.editPrice,
+          notes: row.editNotes
         }
         await stocksApi.updateTrade(row.id, payload)
         ElMessage.success('交易记录已更新')
@@ -995,6 +998,7 @@ export default {
         row.quantity = row.editQuantity
         row.unit = row.editUnit
         row.price = row.editPrice
+        row.notes = row.editNotes
         editingTradeId.value = null
       } catch (e) {
         ElMessage.error('更新失败: ' + e.message)
