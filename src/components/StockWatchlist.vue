@@ -87,7 +87,7 @@
       <el-table v-loading="loading" :data="paginatedStocks" style="width: 100%"
         @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" align="center" />
-        <el-table-column type="index" label="序号" width="70" align="center" />
+        <el-table-column type="index" :index="indexMethod" label="序号" width="70" align="center" />
         <el-table-column prop="code" label="股票代码" width="120">
           <template #default="scope">
             <el-link :href="`https://quote.eastmoney.com/${scope.row.code}.html`" target="_blank" type="primary"
@@ -643,6 +643,10 @@ export default {
       return filteredStocks.value.slice(start, end)
     })
 
+    const indexMethod = (index) => {
+      return (currentPage.value - 1) * pageSize.value + index + 1
+    }
+
     watch([searchQuery, selectedTagFilter, showOnlyHasTrades], () => {
       currentPage.value = 1
     })
@@ -1151,6 +1155,7 @@ export default {
       paginatedStocks,
       addStock,
       handleSelectionChange,
+      indexMethod,
       handleSizeChange,
       handleCurrentChange,
       formatDate,
