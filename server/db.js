@@ -484,6 +484,32 @@ const dbService = {
     }
   },
 
+  getAllStockReviews() {
+    if (!useJsonFallback) {
+      return db.prepare(`
+        SELECT sr.id as review_id, sr.stock_id, sr.review_date, sr.content, s.name, s.code
+        FROM stock_reviews sr
+        JOIN stocks s ON sr.stock_id = s.id
+        ORDER BY sr.review_date DESC
+      `).all();
+    } else {
+      const stockReviews = readJsonStockReviews();
+      const stocks = readJsonStocks();
+      const stocksMap = {};
+      stocks.forEach(s => stocksMap[s.id] = s);
+      
+      const mapped = stockReviews.map(r => ({
+        review_id: r.id,
+        stock_id: r.stock_id,
+        review_date: r.review_date,
+        content: r.content,
+        name: stocksMap[r.stock_id] ? stocksMap[r.stock_id].name : '',
+        code: stocksMap[r.stock_id] ? stocksMap[r.stock_id].code : ''
+      }));
+      return mapped.sort((a, b) => b.review_date.localeCompare(a.review_date));
+    }
+  },
+
   getStockReviewsByDate(date) {
     if (!useJsonFallback) {
       return db.prepare(`

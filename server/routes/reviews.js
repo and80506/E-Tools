@@ -35,6 +35,16 @@ router.put('/daily/:date', (req, res) => {
   }
 });
 
+// 获取所有个股的复盘
+router.get('/stock/all', (req, res) => {
+  try {
+    const records = dbService.getAllStockReviews();
+    res.json({ success: true, data: records });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 获取某日所有有复盘的股票
 router.get('/stock/:date', (req, res) => {
   try {

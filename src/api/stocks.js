@@ -277,6 +277,12 @@ export const reviewsApi = {
     return res.data || [];
   },
 
+  // 获取所有股票的复盘历史
+  async getAllStockReviews() {
+    const res = await request('/reviews/stock/all');
+    return res.data || [];
+  },
+
   // 修改复盘日期
   async updateStockReviewDate(reviewId, date) {
     return await request(`/reviews/stock/date/${reviewId}`, {

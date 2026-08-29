@@ -18,6 +18,9 @@
           <el-button type="info" plain @click="openTagManager">
             标签管理
           </el-button>
+          <el-button type="success" plain @click="openGlobalStockReviewHistory">
+            笔记复盘
+          </el-button>
           <el-button type="success" plain @click="openTradeReview">
             交易复盘
           </el-button>
@@ -392,9 +395,17 @@
       </el-table>
     </el-drawer>
 
-    <!-- 个股复盘历史抽屉 -->
-    <el-drawer v-model="showStockReviewDrawer" :title="(currentReviewStock?.name || '') + ' - 历史复盘'" size="50%">
-      <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-start;">
+    <!-- 笔记复盘历史抽屉 (全局/个股) -->
+    <el-drawer v-model="showStockReviewDrawer" :title="currentReviewStock ? `${currentReviewStock.name} - 历史复盘` : '全局笔记复盘历史'" size="50%">
+      <div v-if="!currentReviewStock" style="margin-bottom: 15px; display: flex; gap: 15px;">
+        <el-input v-model="reviewSearchName" placeholder="搜索公司名称或代码..." clearable style="width: 200px;"></el-input>
+        <el-select v-model="reviewSearchTag" placeholder="筛选标签" clearable style="width: 150px;">
+          <el-option label="全部标签" value="" />
+          <el-option v-for="t in allTags" :key="t.id" :label="t.name" :value="t.id" />
+        </el-select>
+      </div>
+
+      <div v-if="currentReviewStock" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-start;">
         <el-date-picker
           v-model="newReviewForm.date"
           type="date"
@@ -413,7 +424,8 @@
         <el-button type="primary" @click="submitNewReview" :loading="submittingReview">添加笔记</el-button>
       </div>
 
-      <el-table :data="stockReviewHistory" style="width: 100%" max-height="800">
+      <el-table :data="filteredStockReviewHistory" style="width: 100%" max-height="800">
+        <el-table-column v-if="!currentReviewStock" prop="name" label="公司名称" width="120" />
         <el-table-column label="日期" width="160">
           <template #default="scope">
             <el-date-picker 
@@ -545,6 +557,24 @@ export default {
     const showStockReviewDrawer = ref(false)
     const currentReviewStock = ref(null)
     const stockReviewHistory = ref([])
+    const reviewSearchName = ref('')
+    const reviewSearchTag = ref('')
+    const filteredStockReviewHistory = computed(() => {
+      let result = stockReviewHistory.value
+      if (!currentReviewStock.value) {
+        if (reviewSearchName.value) {
+          const q = reviewSearchName.value.trim().toLowerCase()
+          result = result.filter(r => r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q))
+        }
+        if (reviewSearchTag.value) {
+          result = result.filter(r => {
+            const stock = stocks.value.find(s => String(s.id) === String(r.stock_id))
+            return stock && stock.tags && stock.tags.some(tag => String(tag.id) === String(reviewSearchTag.value))
+          })
+        }
+      }
+      return result
+    })
     const submittingReview = ref(false)
     const newReviewForm = ref({
       date: new Date().toISOString().split('T')[0],
@@ -1007,6 +1037,18 @@ export default {
       }
     }
 
+    const openGlobalStockReviewHistory = async () => {
+      try {
+        currentReviewStock.value = null
+        reviewSearchName.value = ''
+        reviewSearchTag.value = ''
+        stockReviewHistory.value = await reviewsApi.getAllStockReviews()
+        showStockReviewDrawer.value = true
+      } catch (err) {
+        ElMessage.error('加载全局笔记复盘历史失败: ' + err.message)
+      }
+    }
+
     const openStockReviewHistory = async (stock) => {
       try {
         currentReviewStock.value = stock
@@ -1041,11 +1083,19 @@ export default {
       try {
         await reviewsApi.updateStockReviewDate(row.review_id, row.review_date)
         ElMessage.success('日期已修改')
-        stockReviewHistory.value = await reviewsApi.getStockReviews(currentReviewStock.value.id)
+        if (currentReviewStock.value) {
+          stockReviewHistory.value = await reviewsApi.getStockReviews(currentReviewStock.value.id)
+        } else {
+          stockReviewHistory.value = await reviewsApi.getAllStockReviews()
+        }
       } catch (err) {
         ElMessage.error(err.message)
         // 回滚重载
-        stockReviewHistory.value = await reviewsApi.getStockReviews(currentReviewStock.value.id)
+        if (currentReviewStock.value) {
+          stockReviewHistory.value = await reviewsApi.getStockReviews(currentReviewStock.value.id)
+        } else {
+          stockReviewHistory.value = await reviewsApi.getAllStockReviews()
+        }
       }
     }
 
@@ -1065,7 +1115,7 @@ export default {
       }
       savingEditReview.value = true
       try {
-        await reviewsApi.saveStockReview(currentReviewStock.value.id, row.review_date, row.editContent)
+        await reviewsApi.saveStockReview(row.stock_id, row.review_date, row.editContent)
         ElMessage.success('笔记已更新')
         row.content = row.editContent
         editingReviewId.value = null
@@ -1159,7 +1209,11 @@ export default {
       newReviewForm,
       editingReviewId,
       savingEditReview,
+      openGlobalStockReviewHistory,
       openStockReviewHistory,
+      reviewSearchName,
+      reviewSearchTag,
+      filteredStockReviewHistory,
       submitNewReview,
       updateReviewDate,
       startEditReview,
