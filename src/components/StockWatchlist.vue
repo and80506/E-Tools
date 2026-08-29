@@ -305,6 +305,10 @@
     <el-drawer v-model="showTradeReviewDrawer" :title="filterStockForTrades ? `${filterStockForTrades.name} - 交易复盘` : '全局交易复盘历史'" size="60%">
       <div v-if="!filterStockForTrades" style="margin-bottom: 15px; display: flex; gap: 15px;">
         <el-input v-model="tradeSearchName" placeholder="搜索公司名称或代码..." clearable style="width: 200px;"></el-input>
+        <el-select v-model="tradeSearchTag" placeholder="筛选标签" clearable style="width: 150px;">
+          <el-option label="全部标签" value="" />
+          <el-option v-for="t in allTags" :key="t.id" :label="t.name" :value="t.id" />
+        </el-select>
         <el-select v-model="tradeSearchType" placeholder="全部操作" clearable style="width: 120px;">
           <el-option label="全部" value=""></el-option>
           <el-option label="买入" value="buy"></el-option>
@@ -498,6 +502,7 @@ export default {
     const filterStockForTrades = ref(null)
     const tradeSearchName = ref('')
     const tradeSearchType = ref('')
+    const tradeSearchTag = ref('')
     const filteredTradeRecords = computed(() => {
       let result = tradeRecords.value
       if (filterStockForTrades.value) {
@@ -506,6 +511,12 @@ export default {
         if (tradeSearchName.value) {
           const q = tradeSearchName.value.trim().toLowerCase()
           result = result.filter(t => t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q))
+        }
+        if (tradeSearchTag.value) {
+          result = result.filter(t => {
+            const stock = stocks.value.find(s => s.code === t.code || s.name === t.name)
+            return stock && stock.tags && stock.tags.some(tag => String(tag.id) === String(tradeSearchTag.value))
+          })
         }
         if (tradeSearchType.value) {
           result = result.filter(t => t.type === tradeSearchType.value)
@@ -1121,6 +1132,7 @@ export default {
       filterStockForTrades,
       tradeSearchName,
       tradeSearchType,
+      tradeSearchTag,
       filteredTradeRecords,
       showAddTradeModal,
       currentTradeStock,
