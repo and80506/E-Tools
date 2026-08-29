@@ -194,6 +194,13 @@ export const stocksApi = {
     return await request(`/trades/${id}`, {
       method: 'DELETE'
     });
+  },
+
+  async updateTrade(id, tradeData) {
+    return await request(`/trades/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(tradeData)
+    });
   }
 };
 

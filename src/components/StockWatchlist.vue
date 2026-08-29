@@ -280,6 +280,9 @@
             </el-select>
           </div>
         </el-form-item>
+        <el-form-item label="价格">
+          <el-input v-model="newTradeForm.price" placeholder="交易单价 (可选)"></el-input>
+        </el-form-item>
         <el-form-item label="原因逻辑">
           <el-input type="textarea" v-model="newTradeForm.reason" rows="2" placeholder="买入/卖出原因"></el-input>
         </el-form-item>
@@ -310,17 +313,39 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="数量" width="120">
+        <el-table-column label="数量/价格" width="120">
           <template #default="scope">
             {{ scope.row.quantity }} {{ scope.row.unit }}
+            <span v-if="scope.row.price" style="color:#e6a23c; font-size:12px;"><br>@ {{ scope.row.price }}</span>
             <span v-if="scope.row.notes" style="color:#909399; font-size:12px;"><br>({{ scope.row.notes }})</span>
           </template>
         </el-table-column>
-        <el-table-column prop="reason" label="原因/逻辑"></el-table-column>
-        <el-table-column prop="return_rate" label="收益率" width="120"></el-table-column>
-        <el-table-column label="操作" width="80" fixed="right">
+        <el-table-column prop="reason" label="原因/逻辑">
           <template #default="scope">
-            <el-button size="small" type="danger" link @click="deleteTradeRecord(scope.row.id)">删除</el-button>
+            <div v-if="editingTradeId === scope.row.id">
+              <el-input type="textarea" v-model="scope.row.editReason" rows="2" />
+            </div>
+            <div v-else>{{ scope.row.reason }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="return_rate" label="收益率" width="120">
+          <template #default="scope">
+            <div v-if="editingTradeId === scope.row.id">
+              <el-input v-model="scope.row.editReturnRate" size="small" />
+            </div>
+            <div v-else>{{ scope.row.return_rate }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="scope">
+            <div v-if="editingTradeId === scope.row.id">
+              <el-button size="small" type="primary" link @click="saveEditTrade(scope.row)" :loading="savingEditTrade">保存</el-button>
+              <el-button size="small" link @click="cancelEditTrade(scope.row)">取消</el-button>
+            </div>
+            <div v-else>
+              <el-button size="small" type="primary" link @click="startEditTrade(scope.row)">修改</el-button>
+              <el-button size="small" type="danger" link @click="deleteTradeRecord(scope.row.id)">删除</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -446,10 +471,14 @@ export default {
       type: 'buy',
       quantity: 100,
       unit: '股',
+      price: '',
       reason: '',
       return_rate: '',
       notes: ''
     })
+
+    const editingTradeId = ref(null)
+    const savingEditTrade = ref(false)
 
     // 个股复盘历史
     const showStockReviewDrawer = ref(false)
@@ -831,6 +860,7 @@ export default {
         type: 'buy',
         quantity: 100,
         unit: '股',
+        price: '',
         reason: '',
         return_rate: '',
         notes: ''
@@ -865,6 +895,32 @@ export default {
         ElMessage.success('删除成功')
       } catch (err) {
         ElMessage.error('删除失败: ' + err.message)
+      }
+    }
+
+    const startEditTrade = (row) => {
+      row.editReason = row.reason
+      row.editReturnRate = row.return_rate
+      editingTradeId.value = row.id
+    }
+
+    const cancelEditTrade = () => {
+      editingTradeId.value = null
+    }
+
+    const saveEditTrade = async (row) => {
+      savingEditTrade.value = true
+      try {
+        const payload = { ...row, reason: row.editReason, return_rate: row.editReturnRate }
+        await stocksApi.updateTrade(row.id, payload)
+        ElMessage.success('交易记录已更新')
+        row.reason = row.editReason
+        row.return_rate = row.editReturnRate
+        editingTradeId.value = null
+      } catch (e) {
+        ElMessage.error('更新失败: ' + e.message)
+      } finally {
+        savingEditTrade.value = false
       }
     }
 
@@ -1004,6 +1060,11 @@ export default {
       openAddTradeModal,
       submitTrade,
       deleteTradeRecord,
+      editingTradeId,
+      savingEditTrade,
+      startEditTrade,
+      cancelEditTrade,
+      saveEditTrade,
 
       showStockReviewDrawer,
       currentReviewStock,
