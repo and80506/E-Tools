@@ -29,8 +29,24 @@ router.get('/index', (req, res) => {
     // Execute python script with code argument
     exec(`"${pythonCmd}" "${scriptPath}" ${code}`, { maxBuffer: 1024 * 1024 * 10, env }, (error, stdout, stderr) => {
       if (error) {
-        console.error('Error executing python script:', error);
-        return res.status(500).json({ success: false, message: 'Failed to fetch data from Lixinger' });
+        // 尝试从 stdout 中提取 Python 主动打印的 JSON 错误信息
+        try {
+          const jsonStartIndex = stdout.indexOf('{');
+          if (jsonStartIndex !== -1) {
+            const result = JSON.parse(stdout.substring(jsonStartIndex));
+            if (result.message) {
+              console.error(`[Python 拦截] ${result.message}`);
+              return res.status(500).json({ success: false, message: result.message });
+            }
+          }
+        } catch (e) {
+          // 忽略解析错误
+        }
+        
+        // 如果提取不到，则打印真实的 Python 崩溃堆栈
+        const realError = stderr || stdout || error.message;
+        console.error('\n[Python 运行崩溃]\n', realError);
+        return res.status(500).json({ success: false, message: '大盘数据拉取异常，请查看终端报错' });
       }
       
       try {

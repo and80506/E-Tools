@@ -65,6 +65,7 @@
 
 - Node.js >= 16.0.0
 - npm >= 8.0.0
+- (可选推荐) Python 3.x (用于支持大盘宏观指标数据的智能抓取)
 
 ### 安装与运行
 
@@ -73,16 +74,14 @@
 git clone https://github.com/your-username/Value-Invest-Sys.git
 cd Value-Invest-Sys
 
-# 2. 安装服务端与前端依赖
-npm install
+# 2. 一键启动并自动安装依赖
+# Windows 用户请双击运行或在 CMD 中输入：
+start.bat
 
-# 3. (可选) 导入测试种子数据，快速体验功能
-npm run seed:trades   # 导入股票历史交易测试数据
-npm run seed:reviews  # 导入全局复盘笔记测试数据
-
-# 4. 一键启动 (将同时启动前端预览与后端 API 服务)
+# Mac/Linux 用户请在终端运行：
 ./start.sh
-```
+
+# *注意：启动脚本会自动帮您检测并执行 npm install 和 pip install（如果安装了 Python）。
 
 > **🎉 启动成功！** 终端会打印出本地访问地址及局域网 IP 地址，打开浏览器即可开始您的投资复盘之旅。
 
@@ -103,7 +102,11 @@ Value-Invest-Sys/
 │   ├── components/       # 模块化组件 (复盘、自选股、估值工具等)
 │   ├── App.vue           # 根组件及布局
 │   └── main.js           # Vue 应用入口
-├── start.sh              # 一键启动脚本
+├── scripts/              # 辅助运维脚本 (包含 Node 与 Python 数据爬虫)
+├── data/                 # SQLite 数据库文件及种子数据的存储目录
+├── public/data/          # 供 GitHub Pages 使用的静态预构建数据目录
+├── start.bat / start.sh  # Windows/Mac 一键启动与依赖智能修复脚本
+├── build.bat / build.sh  # 生产环境一键构建脚本
 └── package.json          # 项目依赖配置
 ```
 
