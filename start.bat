@@ -3,10 +3,10 @@
 pushd "%~dp0"
 
 :: 避免部分机器中文乱码直接崩溃，换为基础英文输出
-title ANTIGRAVITY Value-Invest-Sys Local Service
+title Value-Invest-Sys Local Service
 
 echo =======================================
-echo   Starting ANTIGRAVITY Value-Invest-Sys
+echo   Starting Value-Invest-Sys
 echo =======================================
 echo.
 

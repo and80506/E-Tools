@@ -40,6 +40,11 @@ const routes = [
     path: '/dcf',
     name: 'ThreeStageDCF',
     component: ThreeStageDCF
+  },
+  {
+    path: '/market',
+    name: 'MarketTrend',
+    component: () => import('../components/MarketTrend.vue')
   }
 ]
 

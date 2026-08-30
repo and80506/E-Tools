@@ -1,6 +1,6 @@
 #!/bin/bash
 echo "======================================="
-echo "  开始构建 ANTIGRAVITY Value-Invest-Sys (Mac/Linux)"
+echo "  开始构建 Value-Invest-Sys (Mac/Linux)"
 echo "======================================="
 echo ""
 

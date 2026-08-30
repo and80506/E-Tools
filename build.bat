@@ -2,10 +2,10 @@
 :: Handle UNC paths for network execution
 pushd "%~dp0"
 
-title ANTIGRAVITY Value-Invest-Sys Build Script
+title Value-Invest-Sys Build Script
 
 echo =======================================
-echo   Building ANTIGRAVITY Value-Invest-Sys 
+echo   Building Value-Invest-Sys 
 echo =======================================
 echo.
 

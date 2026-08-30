@@ -7,6 +7,6 @@ module.exports = {
     }
   },
   optimizeDeps: {
-    exclude: ['better-sqlite3', 'express', 'cors']
+    exclude: ['better-sqlite3', 'express', 'cors', 'dotenv', 'axios']
   }
 }

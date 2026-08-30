@@ -29,6 +29,12 @@
             </el-icon>
             <span>复盘笔记</span>
           </el-menu-item>
+          <el-menu-item index="/market">
+            <el-icon>
+              <TrendCharts />
+            </el-icon>
+            <span>大盘指标</span>
+          </el-menu-item>
           <el-menu-item index="/calculator">
             <el-icon>
               <DataBoard />

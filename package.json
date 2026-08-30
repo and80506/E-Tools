@@ -1,20 +1,25 @@
 {
   "name": "value-invest-sys",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "scripts": {
     "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
     "dev": "vite --port 8080",
     "build": "vite build",
+    "build:ghpages": "node scripts/build_static_data.js && vite build --mode ghpages",
     "server": "node server/index.js",
     "start": "node server/index.js",
     "build:serve": "npm run build && node server/index.js",
-    "seed:trades": "node private_scripts/seed_trades.example.js",
-    "seed:reviews": "node private_scripts/seed_reviews.example.js"
+    "seed:trades": "node scripts/user_data/seed_trades.example.js",
+    "seed:reviews": "node scripts/user_data/seed_reviews.example.js",
+    "postinstall": "node -e \"const fs=require('fs'); if(!fs.existsSync('.env') && fs.existsSync('.env.example')) { fs.copyFileSync('.env.example', '.env'); console.log('Created .env from .env.example'); }\""
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "axios": "^1.20.0",
     "better-sqlite3": "^11.8.1",
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "echarts": "^6.1.0",
     "element-plus": "^2.14.4",
     "express": "^4.21.2",
     "md-editor-v3": "^6.5.6",
