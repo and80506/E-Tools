@@ -20,7 +20,18 @@ if errorlevel 1 (
     exit /b
 )
 
-:: 检查依赖是否安装
+:: 检查并配置 Python 依赖
+python -c "import sys" >nul 2>&1
+if not errorlevel 1 (
+    echo [INFO] Python found, checking/installing python dependencies...
+    pip install -r requirements.txt
+) else (
+    echo [WARNING] Python not found. Python-based market data scripts will not work.
+    echo If you want to use advanced market indicators, install Python and add it to PATH.
+    echo.
+)
+
+:: 检查 Node 依赖是否安装
 if not exist "node_modules\" (
     echo [INFO] First time setup: Installing dependencies...
     call npm install
