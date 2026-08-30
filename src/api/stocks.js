@@ -119,6 +119,15 @@ export const stocksApi = {
     return res.data;
   },
 
+  // 修改单支股票
+  async updateStock(id, stockData) {
+    const res = await request(`/stocks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(stockData)
+    });
+    return res;
+  },
+
   // 删除单支股票
   async deleteStock(id) {
     return await request(`/stocks/${id}`, {

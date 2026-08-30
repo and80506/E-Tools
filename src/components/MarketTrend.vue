@@ -5,6 +5,7 @@
         <el-radio-button label="000300">沪深300</el-radio-button>
         <el-radio-button label="000905">中证500</el-radio-button>
         <el-radio-button label="000852">中证1000</el-radio-button>
+        <el-radio-button v-if="customIndexCode && !['000300', '000905', '000852'].includes(customIndexCode)" :label="customIndexCode">{{ customIndexName }}</el-radio-button>
       </el-radio-group>
     </div>
 
@@ -44,7 +45,8 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { InfoFilled } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
@@ -55,9 +57,16 @@ export default {
     InfoFilled
   },
   setup() {
+    const route = useRoute()
     const loading = ref(true)
     const currentIndex = ref('000300')
+    const customIndexCode = ref(null)
+    const customIndexName = ref('')
+
     const currentIndexName = computed(() => {
+      if (currentIndex.value === customIndexCode.value && customIndexCode.value) {
+        return customIndexName.value
+      }
       const map = {
         '000300': '沪深300',
         '000905': '中证500',
@@ -284,9 +293,26 @@ export default {
       if (chart2) chart2.resize()
     }
 
+    // Initialize query params
     onMounted(() => {
+      if (route.query.indexCode) {
+        customIndexCode.value = route.query.indexCode
+        customIndexName.value = route.query.indexName || route.query.indexCode
+        currentIndex.value = route.query.indexCode
+      }
+      
       fetchData()
       window.addEventListener('resize', handleResize)
+    })
+
+    // Watch query to update if navigating within the same component
+    watch(() => route.query.indexCode, (newCode) => {
+      if (newCode) {
+        customIndexCode.value = newCode
+        customIndexName.value = route.query.indexName || newCode
+        currentIndex.value = newCode
+        fetchData()
+      }
     })
 
     onUnmounted(() => {
@@ -299,6 +325,8 @@ export default {
       loading,
       currentIndex,
       currentIndexName,
+      customIndexCode,
+      customIndexName,
       fetchData,
       chart1Ref,
       chart2Ref

@@ -52,6 +52,18 @@ router.delete('/stocks/:id', (req, res) => {
   }
 });
 
+// 修改单支股票
+router.put('/stocks/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const { code, name } = req.body;
+    const result = dbService.updateStock(id, { code, name });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 批量导入
 router.post('/stocks/import', (req, res) => {
   try {

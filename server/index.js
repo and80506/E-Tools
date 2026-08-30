@@ -7,6 +7,7 @@ const fs = require('fs');
 
 const stocksRouter = require('./routes/stocks');
 const marketRouter = require('./routes/market');
+const stockRoutes = require('./routes/stock');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +22,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api/tags', require('./routes/tags'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/market', marketRouter);
+app.use('/api/stock', stockRoutes);
 app.use('/api', stocksRouter);
 
 // 系统状态健康检查

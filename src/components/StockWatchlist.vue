@@ -12,7 +12,7 @@
             <el-option label="全部标签" value="" />
             <el-option v-for="t in allTags" :key="t.id" :label="t.name" :value="t.id" />
           </el-select>
-          
+
           <el-switch v-model="showOnlyHasTrades" active-text="仅显示有交易记录" />
         </el-col>
 
@@ -31,6 +31,9 @@
           </el-button>
           <el-button type="default" @click="toggleBulkPanel">
             批量导入 / 导出
+          </el-button>
+          <el-button :type="isManageMode ? 'warning' : 'default'" @click="isManageMode = !isManageMode">
+            {{ isManageMode ? '退出管理' : '个股管理' }}
           </el-button>
           <el-button type="primary" @click="showAddModal = true">
             新增自选股
@@ -86,9 +89,9 @@
     <el-card shadow="never" class="table-card" :body-style="{ padding: '0px' }">
       <el-table v-loading="loading" :data="paginatedStocks" style="width: 100%"
         @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="55" align="center" />
-        <el-table-column type="index" :index="indexMethod" label="序号" width="70" align="center" />
-        <el-table-column prop="code" label="股票代码" width="120">
+        <el-table-column type="selection" width="45" align="center" />
+        <el-table-column type="index" :index="indexMethod" label="序号" width="60" align="center" />
+        <el-table-column prop="code" label="股票代码" width="100">
           <template #default="scope">
             <el-link :href="`https://quote.eastmoney.com/${scope.row.code}.html`" target="_blank" type="primary"
               style="font-weight: 600;">
@@ -96,9 +99,18 @@
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column prop="name" label="股票名称" width="150" />
+        <el-table-column prop="name" label="股票名称" width="140">
+          <template #default="scope">
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <span>{{ scope.row.name }}</span>
+              <el-tag v-if="scope.row.asset_type === 'ETF'" size="small" type="warning" effect="dark">ETF</el-tag>
+              <el-tag v-else-if="scope.row.asset_type === 'Index'" size="small" type="danger" effect="dark">指数</el-tag>
+              <el-tag v-else-if="scope.row.asset_type === 'US_Stock'" size="small" type="info" effect="dark">美股</el-tag>
+            </div>
+          </template>
+        </el-table-column>
 
-        <el-table-column label="标签">
+        <el-table-column label="标签" min-width="150">
           <template #default="scope">
             <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;"
               @click="openStockTagsModal(scope.row)">
@@ -112,20 +124,26 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="添加日期" width="180">
+
+        <el-table-column label="深度分析" width="260" fixed="right">
           <template #default="scope">
-            {{ formatDate(scope.row.created_at) }}
+            <el-button size="small" type="success" plain @click="calculateFCF(scope.row)"
+              :loading="scope.row.fcfLoading">FCF</el-button>
+            <el-button size="small" type="default" plain
+              @click="openTrendsModal(scope.row, 'mc_revenue')">市值/营收</el-button>
+            <el-button size="small" type="default" plain @click="openTrendsModal(scope.row, 'pe')">市盈率</el-button>
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="360" fixed="right">
+        <el-table-column label="操作" :width="isManageMode ? 320 : 320" fixed="right">
           <template #default="scope">
             <el-button size="small" type="primary" plain @click="openStockReviewHistory(scope.row)">笔记</el-button>
             <el-button size="small" type="info" plain @click="openSingleStockTradeReview(scope.row)">复盘</el-button>
             <el-button size="small" type="warning" plain @click="openAddTradeModal(scope.row)">买卖</el-button>
-            <el-button size="small" type="success" plain @click="calculateFCF(scope.row)"
-              :loading="scope.row.fcfLoading">FCF</el-button>
-            <el-button size="small" type="danger" plain @click="deleteStock(scope.row.id)">删除</el-button>
+            <el-button v-if="isManageMode" size="small" type="primary" plain
+              @click="openEditStockModal(scope.row)">修改</el-button>
+            <el-button v-if="isManageMode" size="small" type="danger" plain
+              @click="deleteStock(scope.row.id)">删除</el-button>
           </template>
         </el-table-column>
 
@@ -134,15 +152,9 @@
         </template>
       </el-table>
       <div style="padding: 15px; display: flex; justify-content: flex-end;">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="filteredStocks.length"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
+        <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper" :total="filteredStocks.length"
+          @size-change="handleSizeChange" @current-change="handleCurrentChange" />
       </div>
     </el-card>
 
@@ -160,6 +172,24 @@
         <span class="dialog-footer">
           <el-button @click="closeAddModal">取消</el-button>
           <el-button type="primary" @click="addStock">确认添加</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 修改自选股 单独模态框 -->
+    <el-dialog v-model="showEditStockModal" title="修改自选股" width="400px">
+      <el-form label-width="80px">
+        <el-form-item label="股票代码">
+          <el-input v-model="editStockForm.code" @keyup.enter="saveEditStock"></el-input>
+        </el-form-item>
+        <el-form-item label="股票名称">
+          <el-input v-model="editStockForm.name" @keyup.enter="saveEditStock"></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showEditStockModal = false">取消</el-button>
+          <el-button type="primary" @click="saveEditStock">确认修改</el-button>
         </span>
       </template>
     </el-dialog>
@@ -267,7 +297,8 @@
     <el-dialog v-model="showAddTradeModal" :title="`记录交易 - ${currentTradeStock?.name}`" width="450px">
       <el-form label-width="80px" size="small">
         <el-form-item label="交易日期">
-          <el-date-picker v-model="newTradeForm.trade_date" type="date" value-format="YYYY-MM-DD" placeholder="选择日期" style="width: 100%;"></el-date-picker>
+          <el-date-picker v-model="newTradeForm.trade_date" type="date" value-format="YYYY-MM-DD" placeholder="选择日期"
+            style="width: 100%;"></el-date-picker>
         </el-form-item>
         <el-form-item label="操作方向">
           <el-radio-group v-model="newTradeForm.type">
@@ -277,7 +308,8 @@
         </el-form-item>
         <el-form-item label="数量">
           <div style="display: flex; gap: 10px;">
-            <el-input-number v-model="newTradeForm.quantity" :min="1" :step="newTradeForm.unit === '股' ? 100 : 1" style="flex: 1;"></el-input-number>
+            <el-input-number v-model="newTradeForm.quantity" :min="1" :step="newTradeForm.unit === '股' ? 100 : 1"
+              style="flex: 1;"></el-input-number>
             <el-select v-model="newTradeForm.unit" style="width: 100px;">
               <el-option label="股" value="股"></el-option>
               <el-option label="手" value="手"></el-option>
@@ -307,7 +339,8 @@
     </el-dialog>
 
     <!-- 交易复盘记录抽屉 -->
-    <el-drawer v-model="showTradeReviewDrawer" :title="filterStockForTrades ? `${filterStockForTrades.name} - 交易复盘` : '全局交易复盘历史'" size="60%">
+    <el-drawer v-model="showTradeReviewDrawer"
+      :title="filterStockForTrades ? `${filterStockForTrades.name} - 交易复盘` : '全局交易复盘历史'" size="60%">
       <div v-if="!filterStockForTrades" style="margin-bottom: 15px; display: flex; gap: 15px;">
         <el-input v-model="tradeSearchName" placeholder="搜索公司名称或代码..." clearable style="width: 200px;"></el-input>
         <el-select v-model="tradeSearchTag" placeholder="筛选标签" clearable style="width: 150px;">
@@ -324,7 +357,8 @@
         <el-table-column label="日期" width="140">
           <template #default="scope">
             <div v-if="editingTradeId === scope.row.id">
-              <el-date-picker v-model="scope.row.editTradeDate" type="date" value-format="YYYY-MM-DD" size="small" style="width: 100%;" :clearable="false"></el-date-picker>
+              <el-date-picker v-model="scope.row.editTradeDate" type="date" value-format="YYYY-MM-DD" size="small"
+                style="width: 100%;" :clearable="false"></el-date-picker>
             </div>
             <div v-else>{{ scope.row.trade_date }}</div>
           </template>
@@ -349,7 +383,8 @@
           <template #default="scope">
             <div v-if="editingTradeId === scope.row.id">
               <div style="margin-bottom: 5px; display: flex; gap: 5px;">
-                <el-input v-model="scope.row.editQuantity" type="number" :min="1" size="small" style="flex: 1;" placeholder="数量"></el-input>
+                <el-input v-model="scope.row.editQuantity" type="number" :min="1" size="small" style="flex: 1;"
+                  placeholder="数量"></el-input>
                 <el-select v-model="scope.row.editUnit" size="small" style="width: 70px;">
                   <el-option label="股" value="股"></el-option>
                   <el-option label="手" value="手"></el-option>
@@ -357,7 +392,8 @@
                 </el-select>
               </div>
               <el-input v-model="scope.row.editPrice" size="small" placeholder="价格"></el-input>
-              <el-input v-model="scope.row.editNotes" size="small" placeholder="额外备注(可选)" style="margin-top: 5px;"></el-input>
+              <el-input v-model="scope.row.editNotes" size="small" placeholder="额外备注(可选)"
+                style="margin-top: 5px;"></el-input>
             </div>
             <div v-else>
               {{ scope.row.quantity }} {{ scope.row.unit }}
@@ -385,7 +421,8 @@
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="scope">
             <div v-if="editingTradeId === scope.row.id">
-              <el-button size="small" type="primary" link @click="saveEditTrade(scope.row)" :loading="savingEditTrade">保存</el-button>
+              <el-button size="small" type="primary" link @click="saveEditTrade(scope.row)"
+                :loading="savingEditTrade">保存</el-button>
               <el-button size="small" link @click="cancelEditTrade(scope.row)">取消</el-button>
             </div>
             <div v-else>
@@ -398,7 +435,8 @@
     </el-drawer>
 
     <!-- 笔记复盘历史抽屉 (全局/个股) -->
-    <el-drawer v-model="showStockReviewDrawer" :title="currentReviewStock ? `${currentReviewStock.name} - 历史复盘` : '全局笔记复盘历史'" size="50%">
+    <el-drawer v-model="showStockReviewDrawer"
+      :title="currentReviewStock ? `${currentReviewStock.name} - 历史复盘` : '全局笔记复盘历史'" size="50%">
       <div v-if="!currentReviewStock" style="margin-bottom: 15px; display: flex; gap: 15px;">
         <el-input v-model="reviewSearchName" placeholder="搜索公司名称或代码..." clearable style="width: 200px;"></el-input>
         <el-select v-model="reviewSearchTag" placeholder="筛选标签" clearable style="width: 150px;">
@@ -408,21 +446,10 @@
       </div>
 
       <div v-if="currentReviewStock" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-start;">
-        <el-date-picker
-          v-model="newReviewForm.date"
-          type="date"
-          value-format="YYYY-MM-DD"
-          placeholder="选择日期"
-          style="width: 160px;"
-          :clearable="false"
-        />
-        <el-input 
-          v-model="newReviewForm.content" 
-          type="textarea"
-          :rows="2"
-          placeholder="输入新的笔记内容..." 
-          style="flex: 1;"
-        />
+        <el-date-picker v-model="newReviewForm.date" type="date" value-format="YYYY-MM-DD" placeholder="选择日期"
+          style="width: 160px;" :clearable="false" />
+        <el-input v-model="newReviewForm.content" type="textarea" :rows="2" placeholder="输入新的笔记内容..."
+          style="flex: 1;" />
         <el-button type="primary" @click="submitNewReview" :loading="submittingReview">添加笔记</el-button>
       </div>
 
@@ -430,27 +457,17 @@
         <el-table-column v-if="!currentReviewStock" prop="name" label="公司名称" width="120" />
         <el-table-column label="日期" width="160">
           <template #default="scope">
-            <el-date-picker 
-              v-model="scope.row.review_date" 
-              type="date" 
-              size="small" 
-              value-format="YYYY-MM-DD" 
-              style="width: 130px"
-              @change="updateReviewDate(scope.row)"
-              :clearable="false"
-            />
+            <el-date-picker v-model="scope.row.review_date" type="date" size="small" value-format="YYYY-MM-DD"
+              style="width: 130px" @change="updateReviewDate(scope.row)" :clearable="false" />
           </template>
         </el-table-column>
         <el-table-column prop="content" label="复盘内容">
           <template #default="scope">
             <div v-if="editingReviewId === scope.row.review_id">
-              <el-input 
-                type="textarea" 
-                :rows="3" 
-                v-model="scope.row.editContent" 
-              />
+              <el-input type="textarea" :rows="3" v-model="scope.row.editContent" />
               <div style="margin-top: 8px; text-align: right;">
-                <el-button size="small" type="primary" @click="saveEditReview(scope.row)" :loading="savingEditReview">保存</el-button>
+                <el-button size="small" type="primary" @click="saveEditReview(scope.row)"
+                  :loading="savingEditReview">保存</el-button>
                 <el-button size="small" @click="cancelEditReview(scope.row)">取消</el-button>
               </div>
             </div>
@@ -461,7 +478,8 @@
         </el-table-column>
         <el-table-column label="操作" width="60" fixed="right">
           <template #default="scope">
-            <el-button v-if="editingReviewId !== scope.row.review_id" size="small" type="primary" link icon="Edit" @click="startEditReview(scope.row)"></el-button>
+            <el-button v-if="editingReviewId !== scope.row.review_id" size="small" type="primary" link icon="Edit"
+              @click="startEditReview(scope.row)"></el-button>
           </template>
         </el-table-column>
         <template #empty>
@@ -469,16 +487,24 @@
         </template>
       </el-table>
     </el-drawer>
+
+    <!-- 趋势图表弹窗 -->
+    <StockTrendsModal ref="stockTrendsModalRef" />
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue'
+import StockTrendsModal from './StockTrendsModal.vue'
+import { ref, onMounted, computed, nextTick, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { tagsApi, stocksApi, reviewsApi } from '../api/stocks'
 
 export default {
   name: 'StockWatchlist',
+  components: {
+    StockTrendsModal
+  },
   setup() {
     const stocks = ref([])
     const searchQuery = ref('')
@@ -491,6 +517,60 @@ export default {
     const loading = ref(false)
     const currentPage = ref(1)
     const pageSize = ref(20)
+
+    const isManageMode = ref(false)
+    const showEditStockModal = ref(false)
+    const editStockForm = ref({ id: null, code: '', name: '' })
+
+    const openEditStockModal = (row) => {
+      editStockForm.value = { id: row.id, code: row.code, name: row.name }
+      showEditStockModal.value = true
+    }
+
+    const saveEditStock = async () => {
+      if (!editStockForm.value.code || !editStockForm.value.name) {
+        ElMessage.warning('代码和名称不能为空')
+        return
+      }
+      try {
+        await stocksApi.updateStock(editStockForm.value.id, {
+          code: editStockForm.value.code,
+          name: editStockForm.value.name
+        })
+        ElMessage.success('修改成功')
+        showEditStockModal.value = false
+        await loadData()
+      } catch (err) {
+        ElMessage.error(err.message || '修改失败')
+      }
+    }
+
+    const stockTrendsModalRef = ref(null)
+
+    const router = useRouter()
+
+    const openTrendsModal = (row, type) => {
+      if (row.asset_type === 'ETF') {
+        ElMessage.warning('ETF 暂不支持估值趋势分析，请添加其对应的指数代码')
+        return
+      }
+      
+      if (row.asset_type === 'Index') {
+        // 跳转到大盘指标，并传递 indexCode 和 indexName
+        router.push({
+          path: '/market',
+          query: {
+            indexCode: row.code,
+            indexName: row.name
+          }
+        })
+        return
+      }
+
+      if (stockTrendsModalRef.value) {
+        stockTrendsModalRef.value.open(row.code, row.name, type)
+      }
+    }
 
     // 标签系统相关状态
     const allTags = ref([])
@@ -1016,11 +1096,11 @@ export default {
     const saveEditTrade = async (row) => {
       savingEditTrade.value = true
       try {
-        const payload = { 
-          ...row, 
+        const payload = {
+          ...row,
           trade_date: row.editTradeDate,
           type: row.editType,
-          reason: row.editReason, 
+          reason: row.editReason,
           return_rate: row.editReturnRate,
           quantity: row.editQuantity,
           unit: row.editUnit,
@@ -1151,6 +1231,13 @@ export default {
       loading,
       currentPage,
       pageSize,
+
+      isManageMode,
+      showEditStockModal,
+      editStockForm,
+      openEditStockModal,
+      saveEditStock,
+
       filteredStocks,
       paginatedStocks,
       addStock,
@@ -1228,7 +1315,10 @@ export default {
       updateReviewDate,
       startEditReview,
       cancelEditReview,
-      saveEditReview
+      saveEditReview,
+
+      stockTrendsModalRef,
+      openTrendsModal
     }
   }
 }

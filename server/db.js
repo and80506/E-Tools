@@ -176,8 +176,9 @@ function writeJsonTradeRecords(data) {
 const dbService = {
   // 获取全部股票列表（带标签）
   getAllStocks() {
+    let stocks = [];
     if (!useJsonFallback) {
-      const stocks = db.prepare('SELECT s.*, EXISTS(SELECT 1 FROM trade_records tr WHERE tr.code = s.code LIMIT 1) as has_trades FROM stocks s ORDER BY s.order_num ASC, s.id ASC').all();
+      stocks = db.prepare('SELECT s.*, EXISTS(SELECT 1 FROM trade_records tr WHERE tr.code = s.code LIMIT 1) as has_trades FROM stocks s ORDER BY s.order_num ASC, s.id ASC').all();
       const relations = db.prepare(`
         SELECT st.stock_id, t.id, t.name, t.color 
         FROM stock_tags st 
@@ -191,9 +192,8 @@ const dbService = {
       stocks.forEach(s => {
         s.tags = tagsMap[s.id] || [];
       });
-      return stocks;
     } else {
-      const stocks = readJsonStocks().sort((a, b) => (a.order_num || 0) - (b.order_num || 0) || a.id - b.id);
+      stocks = readJsonStocks().sort((a, b) => (a.order_num || 0) - (b.order_num || 0) || a.id - b.id);
       const tags = readJsonTags();
       const stockTags = readJsonStockTags();
       const tagsMap = {};
@@ -211,7 +211,98 @@ const dbService = {
         s.tags = relationsMap[s.id] || [];
         s.has_trades = tradedCodes.has(s.code.toUpperCase()) ? 1 : 0;
       });
-      return stocks;
+    }
+
+    stocks.forEach(s => {
+      let assetType = 'Stock';
+      const rawCode = String(s.code ?? '').trim();
+      const c = rawCode.toLowerCase();
+      const isAllDigit = /^\d{6}$/.test(rawCode); // A股标的严格6位数字
+
+      // 美股：不是全数字，包含字母，允许 . 数字符号；排除纯数字脏数据
+      if (!isAllDigit && /^[a-z0-9.]+$/.test(c) && /[a-z]/.test(c)) {
+        assetType = 'US_Stock';
+      }
+      // A股 ETF / LOF 6位数字且以特定号段开头
+      else if (isAllDigit && /^(51|15|56|58|501|16)/.test(rawCode)) {
+        assetType = 'ETF';
+      }
+      // 指数：399 / 899 指数代码 或者名字带指数（ETF已经在上分支拦截）
+      else if (isAllDigit && (/^(399|899)/.test(rawCode) || (s.name && s.name.includes('指数')))) {
+        assetType = 'Index';
+      }
+      // 000xxxx 上证系宽基指数与深市个股区分，规避数字关键词误命中
+      else if (/^000\d{3}$/.test(rawCode)) {
+        const indexKeywords = ['上证', '深证', '中证', '沪深', '科创', '红利'];
+        const indexFullName = ['沪深300', '中证500', '中证1000', '上证50'];
+        const isKeywordHit = s.name && indexKeywords.some(kw => s.name.includes(kw));
+        const isFullNameHit = s.name && indexFullName.some(full => s.name.includes(full));
+        if (isKeywordHit || isFullNameHit) {
+          assetType = 'Index';
+        }
+      }
+
+      s.asset_type = assetType;
+    });
+
+    return stocks;
+  },
+
+  updateStock(id, { code, name }) {
+    if (!code || !name) {
+      throw new Error('股票代码与名称不能为空');
+    }
+    const cleanCode = code.trim().toUpperCase();
+    const cleanName = name.trim();
+
+    if (!useJsonFallback) {
+      const existing = db.prepare('SELECT id, code FROM stocks WHERE id = ?').get(id);
+      if (!existing) {
+        throw new Error('未找到该股票');
+      }
+      
+      const checkCode = db.prepare('SELECT id FROM stocks WHERE code = ? AND id != ?').get(cleanCode, id);
+      if (checkCode) {
+        throw new Error(`股票代码 [${cleanCode}] 已存在`);
+      }
+
+      const stmt = db.prepare('UPDATE stocks SET code = ?, name = ? WHERE id = ?');
+      const info = stmt.run(cleanCode, cleanName, id);
+      
+      // Update trade records if code or name changed
+      if (existing.code !== cleanCode || existing.name !== cleanName) {
+        db.prepare('UPDATE trade_records SET code = ?, name = ? WHERE code = ?').run(cleanCode, cleanName, existing.code);
+      }
+      return { success: info.changes > 0 };
+    } else {
+      let stocks = _readJson(JSON_DB_PATH, initialStocks);
+      const idx = stocks.findIndex(s => String(s.id) === String(id));
+      if (idx !== -1) {
+        if (stocks.some(s => s.code.toUpperCase() === cleanCode && String(s.id) !== String(id))) {
+          throw new Error(`股票代码 [${cleanCode}] 已存在`);
+        }
+        
+        const oldCode = stocks[idx].code;
+        
+        let trades = _readJson(JSON_TRADE_RECORDS_PATH, []);
+        let tradesChanged = false;
+        trades.forEach(t => {
+          if (t.code === oldCode) {
+            t.code = cleanCode;
+            t.name = cleanName;
+            tradesChanged = true;
+          }
+        });
+        if (tradesChanged) {
+          _writeJson(JSON_TRADE_RECORDS_PATH, trades);
+        }
+
+        stocks[idx].code = cleanCode;
+        stocks[idx].name = cleanName;
+        _writeJson(JSON_DB_PATH, stocks);
+        return { success: true };
+      }
+      throw new Error('未找到该股票');
     }
   },
 

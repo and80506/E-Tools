@@ -51,13 +51,56 @@ async function buildAll() {
     console.warn('[build_static_data] WARNING: LIXINGER_TOKEN is not set. Data fetch might fail.');
   }
   
+  // 1. Fetch indices
   for (const code of indices) {
     try {
       await fetchIndex(code);
     } catch (e) {
-      console.error(`[build_static_data] Aborting build due to error.`);
+      console.error(`[build_static_data] Aborting build due to error fetching index ${code}.`);
       process.exit(1);
     }
+  }
+
+  // 2. Fetch all stocks from DB
+  console.log('[build_static_data] Fetching stocks from database...');
+  try {
+    const db = require('../server/db');
+    const stocks = db.getStocks();
+    const stockPythonScriptPath = path.join(__dirname, 'market_data/fetch_stock_akshare.py');
+    
+    for (const stock of stocks) {
+      const code = stock.code;
+      // Skip non-A-share codes temporarily if they are not supported by akshare (e.g. AAPL, MSFT, etc)
+      if (!/^\d{6}$/.test(code)) {
+        console.log(`[build_static_data] Skipping non-A-share code: ${code}`);
+        continue;
+      }
+      
+      console.log(`[build_static_data] Fetching stock data for ${code}...`);
+      await new Promise((resolve, reject) => {
+        exec(`"${pythonCmd}" "${stockPythonScriptPath}" ${code}`, { maxBuffer: 1024 * 1024 * 10, env }, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`[build_static_data] Error fetching stock ${code}. Skipping...`);
+            return resolve(); // Resolve to avoid breaking the entire build for one stock
+          }
+          try {
+            const jsonStartIndex = stdout.indexOf('{');
+            const cleanStdout = jsonStartIndex !== -1 ? stdout.substring(jsonStartIndex) : stdout;
+            const result = JSON.parse(cleanStdout);
+            if (result.success) {
+              const outputPath = path.join(publicDataDir, `stock_${code}.json`);
+              fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
+              console.log(`[build_static_data] Saved ${outputPath}`);
+            }
+          } catch (e) {
+             console.error(`[build_static_data] Parse error for ${code}. Skipping...`);
+          }
+          resolve();
+        });
+      });
+    }
+  } catch (e) {
+    console.error(`[build_static_data] Error fetching stock data:`, e);
   }
   console.log('[build_static_data] All static data built successfully.');
 }
