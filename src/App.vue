@@ -115,7 +115,7 @@ export default {
     const route = useRoute()
     const serverStatus = ref('connecting')
     const currentTime = ref('')
-    const isDemo = import.meta.env && import.meta.env.VITE_DEMO_MODE === 'true';
+    const isDemo = import.meta.env && import.meta.env.VITE_APP_ENV === 'ghpages';
 
     const viewTitle = computed(() => {
       const path = route.path

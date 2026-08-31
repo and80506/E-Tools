@@ -4,7 +4,7 @@
 
 const API_BASE = '/api';
 
-const isDemo = import.meta.env && import.meta.env.VITE_DEMO_MODE === 'true';
+const isDemo = import.meta.env && import.meta.env.VITE_APP_ENV === 'ghpages';
 
 // 生成一点假数据用于在 GitHub Pages 演示
 const demoData = {
