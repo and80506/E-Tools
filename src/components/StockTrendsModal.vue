@@ -91,9 +91,25 @@ const initChart = async () => {
 
   if (trendType.value === 'pe') {
     const peData = data.map(item => item.pe_ttm > 1000 ? 1000 : (item.pe_ttm < -100 ? -100 : item.pe_ttm))
+    
+    // 计算均值和标准差
+    const validPe = peData.filter(v => v > 0 && v < 1000)
+    let sum = 0
+    validPe.forEach(v => sum += v)
+    const mean = validPe.length > 0 ? sum / validPe.length : 0
+    
+    let varianceSum = 0
+    validPe.forEach(v => varianceSum += Math.pow(v - mean, 2))
+    const stdDev = validPe.length > 0 ? Math.sqrt(varianceSum / validPe.length) : 0
+    
+    const highLine = (mean + stdDev).toFixed(2)
+    const meanLine = mean.toFixed(2)
+    const lowLine = (mean - stdDev).toFixed(2)
+
     option = {
       tooltip: { trigger: 'axis' },
-      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      legend: { data: ['PE(TTM)', '均值', '低估线', '高估线'], bottom: 0 },
+      grid: { left: '3%', right: '6%', bottom: '15%', containLabel: true },
       xAxis: { type: 'category', data: dates },
       yAxis: { type: 'value', name: '市盈率 (TTM)' },
       series: [
@@ -108,10 +124,51 @@ const initChart = async () => {
               { offset: 0, color: 'rgba(230,162,60,0.5)' },
               { offset: 1, color: 'rgba(230,162,60,0.1)' }
             ])
+          },
+          markLine: {
+            symbol: 'none',
+            data: [
+              {
+                yAxis: meanLine,
+                name: '均值',
+                lineStyle: { color: '#f1c40f', type: 'dashed' },
+                label: { formatter: '{c}', position: 'end' }
+              },
+              {
+                yAxis: highLine,
+                name: '高估线',
+                lineStyle: { color: '#c0392b', type: 'dashed' },
+                label: { formatter: '{c}', position: 'end' }
+              },
+              {
+                yAxis: lowLine,
+                name: '低估线',
+                lineStyle: { color: '#27ae60', type: 'dashed' },
+                label: { formatter: '{c}', position: 'end' }
+              }
+            ]
           }
+        },
+        {
+          name: '均值',
+          type: 'line',
+          data: [],
+          itemStyle: { color: '#f1c40f' }
+        },
+        {
+          name: '低估线',
+          type: 'line',
+          data: [],
+          itemStyle: { color: '#27ae60' }
+        },
+        {
+          name: '高估线',
+          type: 'line',
+          data: [],
+          itemStyle: { color: '#c0392b' }
         }
       ],
-      dataZoom: [{ type: 'inside', start: 0, end: 100 }, { type: 'slider', start: 0, end: 100 }]
+      dataZoom: [{ type: 'inside', start: 0, end: 100 }, { type: 'slider', start: 0, end: 100, bottom: 30 }]
     }
   } else {
     // 市值与营收
