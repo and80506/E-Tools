@@ -56,8 +56,8 @@ router.delete('/stocks/:id', (req, res) => {
 router.put('/stocks/:id', (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { code, name } = req.body;
-    const result = dbService.updateStock(id, { code, name });
+    const { code, name, research_data } = req.body;
+    const result = dbService.updateStock(id, { code, name, research_data });
     res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

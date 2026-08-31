@@ -125,8 +125,9 @@
         </el-table-column>
 
 
-        <el-table-column label="深度分析" width="260" fixed="right">
+        <el-table-column label="深度分析" width="320" fixed="right">
           <template #default="scope">
+            <el-button size="small" type="primary" plain @click="openResearchModal(scope.row)">体检</el-button>
             <el-button size="small" type="success" plain @click="calculateFCF(scope.row)"
               :loading="scope.row.fcfLoading">FCF</el-button>
             <el-button size="small" type="default" plain
@@ -260,6 +261,48 @@
           <el-button type="primary" @click="saveStockTags">确认关联</el-button>
         </span>
       </template>
+    </el-dialog>
+
+    <!-- 深度研报（体检）模态框 -->
+    <el-dialog v-model="showResearchModal" width="800px" destroy-on-close>
+      <template #header>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding-right: 20px;">
+          <span style="font-size: 18px; font-weight: bold; color: #303133;">
+            个股深度体检 - {{ currentResearchStock?.name }} ({{ currentResearchStock?.code }})
+          </span>
+          <el-tooltip content="生成 AI 辅助分析提示词并复制" placement="top">
+            <el-button type="primary" link @click="copyAIPrompt">
+              <el-icon size="18"><MagicStick /></el-icon>
+            </el-button>
+          </el-tooltip>
+        </div>
+      </template>
+      <div v-if="currentResearchStock">
+        <table class="research-table" cellspacing="0" cellpadding="0">
+          <thead>
+            <tr>
+              <th width="160" style="background-color: white; border: 1px solid #7bc1cf;"></th>
+              <th width="260" style="background-color: #00b0f0; color: white; border: 1px solid #7bc1cf;">填写说明</th>
+              <th style="background-color: #00b0f0; color: white; border: 1px solid #7bc1cf;">标签 / 内容</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="field in researchConfig" :key="field.key">
+              <td :class="['label-td', field.colorClass]">{{ field.label }}</td>
+              <td class="desc-td">{{ field.desc }}</td>
+              <td class="input-td" @mouseenter="field.hover = true" @mouseleave="field.hover = false">
+                <el-input 
+                  v-model="currentResearchData[field.key]" 
+                  type="textarea" 
+                  autosize
+                  placeholder="点击输入..."
+                  @blur="saveResearchData"
+                ></el-input>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </el-dialog>
 
     <!-- FCF 计算结果模态框 -->
@@ -498,12 +541,14 @@ import StockTrendsModal from './StockTrendsModal.vue'
 import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { MagicStick } from '@element-plus/icons-vue'
 import { tagsApi, stocksApi, reviewsApi } from '../api/stocks'
 
 export default {
   name: 'StockWatchlist',
   components: {
-    StockTrendsModal
+    StockTrendsModal,
+    MagicStick
   },
   setup() {
     const stocks = ref([])
@@ -587,6 +632,88 @@ export default {
     const showStockTagsModal = ref(false)
     const currentTagsStock = ref(null)
     const selectedStockTagIds = ref([])
+
+    const showResearchModal = ref(false)
+    const currentResearchStock = ref(null)
+    const currentResearchData = ref({})
+    
+    const researchConfig = [
+      { key: 'companyName', label: '公司全称', desc: '公司全称', colorClass: 'bg-green' },
+      { key: 'companyIntro', label: '公司简介', desc: '公司简介/使命/愿景', colorClass: 'bg-green' },
+      { key: 'industryTrend', label: '行业发展趋势', desc: '成长期/成熟期/衰退期', colorClass: 'bg-green' },
+      { key: 'industryCompetition', label: '行业竞争格局', desc: '百舸争流/一超多强/巨头垄断', colorClass: 'bg-green' },
+      { key: 'industryRisk', label: '行业系统性风险', desc: '导致行业整体萎靡', colorClass: 'bg-green' },
+      { key: 'businessDesc', label: '公司业务描述', desc: '分析公司类型，简述公司是如何运作的', colorClass: 'bg-blue' },
+      { key: 'revenueAnalysis', label: '收入构成分析', desc: '分析公司收入结构是否合理，可持续', colorClass: 'bg-blue' },
+      { key: 'supplyChain', label: '供应链上下游', desc: '分析价值链上游（客户）和下游（供应商）', colorClass: 'bg-blue' },
+      { key: 'competitiveAdvantage', label: '公司竞争优势', desc: '和竞争对手相比', colorClass: 'bg-blue' },
+      { key: 'businessRisk', label: '公司经营风险', desc: '公司经营风险', colorClass: 'bg-blue' },
+      { key: 'valueChainStatus', label: '价值链地位', desc: '是否具有定价权', colorClass: 'bg-blue' },
+      { key: 'growthRate', label: '业绩增长率', desc: '查看近七年业绩增长比率，用于观察PE', colorClass: 'bg-blue' },
+      { key: 'balanceSheetAssets', label: '资产负债表-资产', desc: '', colorClass: 'bg-blue' },
+      { key: 'balanceSheetLiabilities', label: '资产负债表-债务', desc: '', colorClass: 'bg-blue' },
+      { key: 'equityStructure', label: '公司股权结构', desc: '国家队/家族企业/合伙人团队/资本爸爸', colorClass: 'bg-red' },
+      { key: 'roe', label: '资产收益率ROE', desc: '高(≥25) 中(≥20) 低(≥15)', colorClass: 'bg-red' },
+      { key: 'currentMarketCap', label: '公司当前市值', desc: '高(千亿以上) 中(五百亿) 低(百亿下)', colorClass: 'bg-red' },
+      { key: 'peCurve', label: 'PE估值曲线', desc: '高/中/低', colorClass: 'bg-red' },
+      { key: 'dividend', label: '公司分红', desc: '高(≥4%) 中(≥2%) 低(≤2%)', colorClass: 'bg-red' },
+      { key: 'techTrend', label: '技术指标-趋势线', desc: '上升/下降/横盘，结构顶/结构底', colorClass: 'bg-red' },
+      { key: 'techChips', label: '技术指标-筹码分布', desc: '高(≥70%) 中(30%~70%) 低(0%~30%)', colorClass: 'bg-red' }
+    ]
+
+    const openResearchModal = (row) => {
+      currentResearchStock.value = row
+      let parsedData = {}
+      try {
+        if (row.research_data) {
+          parsedData = typeof row.research_data === 'string' ? JSON.parse(row.research_data) : row.research_data
+        }
+      } catch(e) {}
+      currentResearchData.value = parsedData
+      showResearchModal.value = true
+    }
+
+    const saveResearchData = async () => {
+      if (!currentResearchStock.value) return
+      try {
+        await stocksApi.updateStock(currentResearchStock.value.id, {
+          code: currentResearchStock.value.code,
+          name: currentResearchStock.value.name,
+          research_data: currentResearchData.value
+        })
+        currentResearchStock.value.research_data = JSON.stringify(currentResearchData.value)
+      } catch (err) {
+        ElMessage.error(err.message || '保存体检数据失败')
+      }
+    }
+
+    const copyAIPrompt = async () => {
+      if (!currentResearchStock.value) return
+      const stockName = currentResearchStock.value.name
+      const stockCode = currentResearchStock.value.code
+      let prompt = `请作为资深的价值投资分析师，对【${stockName} (${stockCode})】进行深度基本面体检分析。\n`
+      prompt += `请根据以下框架和要求，结合你最新的知识库或联网搜索结果，帮我梳理并输出一份结构化的分析报告。如果某项数据你无法准确获取，请明确说明。\n`
+      
+      let lastColor = ''
+      researchConfig.forEach(field => {
+        let groupName = ''
+        if (field.colorClass === 'bg-green' && lastColor !== 'bg-green') { groupName = '\n### 一、 宏观与行业基本面\n'; lastColor = 'bg-green' }
+        if (field.colorClass === 'bg-blue' && lastColor !== 'bg-blue') { groupName = '\n### 二、 公司商业逻辑与护城河\n'; lastColor = 'bg-blue' }
+        if (field.colorClass === 'bg-red' && lastColor !== 'bg-red') { groupName = '\n### 三、 量化指标与技术估值面\n'; lastColor = 'bg-red' }
+        
+        prompt += groupName
+        prompt += `- **${field.label}**: ${field.desc}\n`
+      })
+      
+      prompt += `\n请尽量用数据说话，语言精炼，直击投资核心逻辑，不要空泛的废话。最后请给我一个明确的总结建议。`
+
+      try {
+        await navigator.clipboard.writeText(prompt)
+        ElMessage.success('AI 提示词已复制到剪贴板！可以直接去发给 AI 啦')
+      } catch (err) {
+        ElMessage.error('复制失败，请尝试在安全的浏览器环境下操作')
+      }
+    }
 
     const showFcfModal = ref(false)
     const currentFcfStock = ref(null)
@@ -1277,6 +1404,13 @@ export default {
       openStockTagsModal,
       closeStockTagsModal,
       saveStockTags,
+      showResearchModal,
+      currentResearchStock,
+      currentResearchData,
+      researchConfig,
+      openResearchModal,
+      saveResearchData,
+      copyAIPrompt,
 
       currentFcfStock,
       showFcfModal,
@@ -1331,12 +1465,50 @@ export default {
 
 <style scoped>
 .watchlist-container {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+.research-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.research-table th, .research-table td {
+  border: 1px solid #7bc1cf;
+  padding: 8px;
+}
+.research-table .label-td {
+  font-weight: bold;
+  text-align: center;
+  color: white;
+}
+.research-table .desc-td {
+  color: #333;
+}
+.research-table .bg-green { background-color: #1EBA5C; }
+.research-table .bg-blue { background-color: #0072C6; }
+.research-table .bg-red { background-color: #FF0000; }
+
+.research-table .input-td {
+  padding: 0;
+}
+.research-table .input-td :deep(.el-textarea__inner) {
+  border: none !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  background-color: transparent;
+  padding: 8px;
+  resize: none;
+  min-height: 38px !important;
+}
+.research-table .input-td :deep(.el-textarea__inner:focus) {
+  background-color: #f0f9eb;
 }
 
-/* 操作面板 */
+.action-bar-card {
+  margin-bottom: 20px;
+}
 .action-bar {
   display: flex;
   justify-content: space-between;

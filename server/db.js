@@ -47,7 +47,8 @@ try {
       order_num INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       review_date TEXT DEFAULT '',
-      review_content TEXT DEFAULT ''
+      review_content TEXT DEFAULT '',
+      research_data TEXT DEFAULT '{}'
     );
     CREATE TABLE IF NOT EXISTS tags (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,6 +100,11 @@ try {
       ALTER TABLE stocks ADD COLUMN review_content TEXT DEFAULT '';
     `);
   }
+  
+  const hasResearchData = tableInfo.some(col => col.name === 'research_data');
+  if (!hasResearchData) {
+    db.exec(`ALTER TABLE stocks ADD COLUMN research_data TEXT DEFAULT '{}';`);
+  }
 
   // 检查是否为空，如果为空则插入初始数据
   const countStmt = db.prepare('SELECT COUNT(*) as count FROM stocks');
@@ -122,7 +128,8 @@ try {
       order_num: idx + 1,
       created_at: new Date().toISOString(),
       review_date: '',
-      review_content: ''
+      review_content: '',
+      research_data: '{}'
     }));
     fs.writeFileSync(JSON_DB_PATH, JSON.stringify(defaultData, null, 2), 'utf-8');
   }
@@ -248,7 +255,7 @@ const dbService = {
     return stocks;
   },
 
-  updateStock(id, { code, name }) {
+  updateStock(id, { code, name, research_data }) {
     if (!code || !name) {
       throw new Error('股票代码与名称不能为空');
     }
@@ -266,8 +273,8 @@ const dbService = {
         throw new Error(`股票代码 [${cleanCode}] 已存在`);
       }
 
-      const stmt = db.prepare('UPDATE stocks SET code = ?, name = ? WHERE id = ?');
-      const info = stmt.run(cleanCode, cleanName, id);
+      const stmt = db.prepare('UPDATE stocks SET code = ?, name = ?, research_data = COALESCE(?, research_data) WHERE id = ?');
+      const info = stmt.run(cleanCode, cleanName, research_data !== undefined ? JSON.stringify(research_data) : null, id);
       
       // Update trade records if code or name changed
       if (existing.code !== cleanCode || existing.name !== cleanName) {
@@ -299,6 +306,9 @@ const dbService = {
 
         stocks[idx].code = cleanCode;
         stocks[idx].name = cleanName;
+        if (research_data !== undefined) {
+          stocks[idx].research_data = typeof research_data === 'string' ? research_data : JSON.stringify(research_data);
+        }
         _writeJson(JSON_DB_PATH, stocks);
         return { success: true };
       }
@@ -340,7 +350,8 @@ const dbService = {
         order_num: newOrder,
         created_at: new Date().toISOString(),
         review_date: '',
-        review_content: ''
+        review_content: '',
+        research_data: '{}'
       };
       list.push(newStock);
       writeJsonStocks(list);
