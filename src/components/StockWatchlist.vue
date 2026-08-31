@@ -554,6 +554,11 @@ export default {
         ElMessage.warning('ETF 暂不支持估值趋势分析，请添加其对应的指数代码')
         return
       }
+
+      if (row.asset_type === 'US_Stock') {
+        ElMessage.warning('暂不支持美股的估值趋势分析')
+        return
+      }
       
       if (row.asset_type === 'Index') {
         // 跳转到大盘指标，并传递 indexCode 和 indexName
