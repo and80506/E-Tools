@@ -693,7 +693,7 @@ const dbService = {
   getReviewsByStockId(stock_id) {
     if (!useJsonFallback) {
       return db.prepare(`
-        SELECT id as review_id, review_date, content 
+        SELECT id as review_id, stock_id, review_date, content 
         FROM stock_reviews 
         WHERE stock_id = ? 
         ORDER BY review_date DESC
@@ -704,6 +704,7 @@ const dbService = {
         .filter(r => r.stock_id === stock_id)
         .map(r => ({
           review_id: r.id,
+          stock_id: r.stock_id,
           review_date: r.review_date,
           content: r.content
         }))
