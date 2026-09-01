@@ -70,21 +70,65 @@
 
 ### 安装与运行
 
+#### 方式一：开发环境启动
+
+您可以通过一键脚本快速启动，或者使用标准 npm 命令启动。
+
+**选项 A：一键脚本启动（最简单）**
+
 ```bash
 # 1. 克隆项目
 git clone https://github.com/your-username/Value-Invest-Sys.git
 cd Value-Invest-Sys
 
-# 2. 一键启动并自动安装依赖
+# 2. 运行启动脚本（会自动执行 npm install 安装依赖）
 # Windows 用户请双击运行或在 CMD 中输入：
 start.bat
 
 # Mac/Linux 用户请在终端运行：
 ./start.sh
+```
 
+**选项 B：手动命令启动**
+
+如果您更习惯标准的 npm 工作流，并希望在同一个终端内同时查看到前后端的开发日志：
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/your-username/Value-Invest-Sys.git
+cd Value-Invest-Sys
+
+# 2. 安装依赖
+npm install
+
+# 3. 运行开发模式（同时启动前端 Vite 和后端 API）
+npm run dev:all
+```
 # *注意：启动脚本会自动帮您检测并执行 npm install 和 pip install（如果安装了 Python）。
 
 > **🎉 启动成功！** 终端会打印出本地访问地址及局域网 IP 地址，打开浏览器即可开始您的投资复盘之旅。
+
+#### 方式二：生产环境运行（使用 PM2后台守护）
+
+如果您希望在云服务器或局域网主机上长期运行该服务，推荐使用 PM2：
+
+```bash
+# 1. 安装项目依赖并构建前端静态产物
+npm install
+npm run build
+
+# 2. 全局安装 PM2 (如系统已安装可跳过)
+npm install -g pm2
+
+# 3. 使用 PM2 启动后端服务
+pm2 start server/index.js --name "value-invest-sys"
+```
+
+**💡 PM2 常用管理命令：**
+- **查看运行状态**：`pm2 list`
+- **查看项目日志**：`pm2 logs value-invest-sys`
+- **重启/停止服务**：`pm2 restart value-invest-sys` / `pm2 stop value-invest-sys`
+- **设置开机自启动**：执行 `pm2 save` 后，再执行 `pm2 startup` 并根据提示配置
 
 ---
 
