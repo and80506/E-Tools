@@ -24,7 +24,7 @@ const initialStocks = [
 ];
 
 let db = null;
-let useJsonFallback = false;
+let useJsonFallback = process.env.FORCE_JSON_DB === 'true';
 const JSON_DB_PATH = path.join(DATA_DIR, 'stocks.json');
 const JSON_TAGS_PATH = path.join(DATA_DIR, 'tags.json');
 const JSON_STOCK_TAGS_PATH = path.join(DATA_DIR, 'stock_tags.json');
@@ -32,9 +32,10 @@ const JSON_DAILY_REVIEWS_PATH = path.join(DATA_DIR, 'daily_reviews.json');
 const JSON_STOCK_REVIEWS_PATH = path.join(DATA_DIR, 'stock_reviews.json');
 const JSON_TRADE_RECORDS_PATH = path.join(DATA_DIR, 'trade_records.json');
 
-try {
-  const Database = require('better-sqlite3');
-  db = new Database(DB_PATH);
+if (!useJsonFallback) {
+  try {
+    const Database = require('better-sqlite3');
+    db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
 
   // 初始化表结构
@@ -119,6 +120,10 @@ try {
 } catch (err) {
   console.warn('[DB] SQLite 初始化失败，自动降级为本地 JSON 存储方案:', err.message);
   useJsonFallback = true;
+}
+}
+
+if (useJsonFallback) {
   if (!fs.existsSync(JSON_DB_PATH)) {
     const defaultData = initialStocks.map((s, idx) => ({
       id: idx + 1,

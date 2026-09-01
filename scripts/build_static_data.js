@@ -64,8 +64,9 @@ async function buildAll() {
   // 2. Fetch all stocks from DB
   console.log('[build_static_data] Fetching stocks from database...');
   try {
+    process.env.FORCE_JSON_DB = 'true'; // Prevent better-sqlite3 segfault in CI by forcing JSON fallback
     const db = require('../server/db');
-    const stocks = db.getStocks();
+    const stocks = db.getAllStocks();
     const stockPythonScriptPath = path.join(__dirname, 'market_data/fetch_stock_akshare.py');
     
     for (const stock of stocks) {
