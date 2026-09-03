@@ -74,7 +74,7 @@
                 <el-button type="default">选择并导入 CSV 文件</el-button>
               </el-upload>
               <span v-if="csvFileName" style="margin-left: 10px; font-size: 13px; color: #67c23a;">已选: {{ csvFileName
-              }}</span>
+                }}</span>
             </div>
 
             <div>
@@ -272,12 +272,19 @@
           </span>
           <el-tooltip content="生成 AI 辅助分析提示词并复制" placement="top">
             <el-button type="primary" link @click="copyAIPrompt">
-              <el-icon size="18"><MagicStick /></el-icon>
+              <el-icon size="18">
+                <MagicStick />
+              </el-icon>
             </el-button>
           </el-tooltip>
         </div>
       </template>
       <div v-if="currentResearchStock">
+        <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+          <el-button type="primary" plain @click="showBalanceSheetModal = true">资产负债表</el-button>
+          <el-button type="primary" plain @click="showRevenueCashflowModal = true">现金流/营收</el-button>
+          <el-button type="primary" plain @click="showProfitCashflowModal = true">净利润/现金流</el-button>
+        </div>
         <table class="research-table" cellspacing="0" cellpadding="0">
           <thead>
             <tr>
@@ -291,13 +298,8 @@
               <td :class="['label-td', field.colorClass]">{{ field.label }}</td>
               <td class="desc-td">{{ field.desc }}</td>
               <td class="input-td" @mouseenter="field.hover = true" @mouseleave="field.hover = false">
-                <el-input 
-                  v-model="currentResearchData[field.key]" 
-                  type="textarea" 
-                  autosize
-                  placeholder="点击输入..."
-                  @blur="saveResearchData"
-                ></el-input>
+                <el-input v-model="currentResearchData[field.key]" type="textarea" autosize placeholder="点击输入..."
+                  @blur="saveResearchData"></el-input>
               </td>
             </tr>
           </tbody>
@@ -326,7 +328,7 @@
           <strong>TTM 企业自由现金流 / 股权市值:</strong>
           <span style="float: right; color: #e60012; font-weight: bold; font-size: 18px;">{{
             fcfResult.fcfYield.toFixed(2)
-          }}%</span>
+            }}%</span>
         </p>
       </div>
       <template #footer>
@@ -533,11 +535,26 @@
 
     <!-- 趋势图表弹窗 -->
     <StockTrendsModal ref="stockTrendsModalRef" />
+
+    <!-- 资产负债表模态框 -->
+    <StockBalanceSheetModal v-model="showBalanceSheetModal" :stock-code="currentResearchStock?.code"
+      :stock-name="currentResearchStock?.name" />
+
+    <!-- 现金流模态框 -->
+    <StockRevenueCashflowModal v-model="showRevenueCashflowModal" :stock-code="currentResearchStock?.code"
+      :stock-name="currentResearchStock?.name" />
+
+    <!-- 净利润/现金流模态框 -->
+    <StockProfitCashflowModal v-model="showProfitCashflowModal" :stock-code="currentResearchStock?.code"
+      :stock-name="currentResearchStock?.name" />
   </div>
 </template>
 
 <script>
 import StockTrendsModal from './StockTrendsModal.vue'
+import StockBalanceSheetModal from './StockBalanceSheetModal.vue'
+import StockRevenueCashflowModal from './StockRevenueCashflowModal.vue'
+import StockProfitCashflowModal from './StockProfitCashflowModal.vue'
 import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -548,6 +565,9 @@ export default {
   name: 'StockWatchlist',
   components: {
     StockTrendsModal,
+    StockBalanceSheetModal,
+    StockRevenueCashflowModal,
+    StockProfitCashflowModal,
     MagicStick
   },
   setup() {
@@ -562,6 +582,9 @@ export default {
     const loading = ref(false)
     const currentPage = ref(1)
     const pageSize = ref(20)
+    const showBalanceSheetModal = ref(false)
+    const showRevenueCashflowModal = ref(false)
+    const showProfitCashflowModal = ref(false)
 
     const isManageMode = ref(false)
     const showEditStockModal = ref(false)
@@ -604,7 +627,7 @@ export default {
         ElMessage.warning('暂不支持美股的估值趋势分析')
         return
       }
-      
+
       if (row.asset_type === 'Index') {
         // 跳转到大盘指标，并传递 indexCode 和 indexName
         router.push({
@@ -636,7 +659,7 @@ export default {
     const showResearchModal = ref(false)
     const currentResearchStock = ref(null)
     const currentResearchData = ref({})
-    
+
     const researchConfig = [
       { key: 'companyName', label: '公司全称', desc: '公司全称', colorClass: 'bg-green' },
       { key: 'companyIntro', label: '公司简介', desc: '公司简介/使命/愿景', colorClass: 'bg-green' },
@@ -662,13 +685,19 @@ export default {
     ]
 
     const openResearchModal = (row) => {
+      // 复用 DB 中的 asset_type 字段判断
+      if (row.asset_type === 'ETF' || row.asset_type === 'US_Stock' || row.asset_type === 'Index') {
+        ElMessage.warning('个股深度体检功能当前仅支持 A 股个股，暂不支持美股、指数或 ETF。')
+        return
+      }
+
       currentResearchStock.value = row
       let parsedData = {}
       try {
         if (row.research_data) {
           parsedData = typeof row.research_data === 'string' ? JSON.parse(row.research_data) : row.research_data
         }
-      } catch(e) {}
+      } catch (e) { }
       currentResearchData.value = parsedData
       showResearchModal.value = true
     }
@@ -693,18 +722,18 @@ export default {
       const stockCode = currentResearchStock.value.code
       let prompt = `请作为资深的价值投资分析师，对【${stockName} (${stockCode})】进行深度基本面体检分析。\n`
       prompt += `请根据以下框架和要求，结合你最新的知识库或联网搜索结果，帮我梳理并输出一份结构化的分析报告。如果某项数据你无法准确获取，请明确说明。\n`
-      
+
       let lastColor = ''
       researchConfig.forEach(field => {
         let groupName = ''
         if (field.colorClass === 'bg-green' && lastColor !== 'bg-green') { groupName = '\n### 一、 宏观与行业基本面\n'; lastColor = 'bg-green' }
         if (field.colorClass === 'bg-blue' && lastColor !== 'bg-blue') { groupName = '\n### 二、 公司商业逻辑与护城河\n'; lastColor = 'bg-blue' }
         if (field.colorClass === 'bg-red' && lastColor !== 'bg-red') { groupName = '\n### 三、 量化指标与技术估值面\n'; lastColor = 'bg-red' }
-        
+
         prompt += groupName
         prompt += `- **${field.label}**: ${field.desc}\n`
       })
-      
+
       prompt += `\n请尽量用数据说话，语言精炼，直击投资核心逻辑，不要空泛的废话。最后请给我一个明确的总结建议。`
 
       try {
@@ -1346,6 +1375,10 @@ export default {
       }
     }
 
+    const handleCashFlowClick = () => {
+      showRevenueCashflowModal.value = true
+    }
+
     onMounted(async () => {
       loadData()
       loadTags()
@@ -1363,6 +1396,9 @@ export default {
       loading,
       currentPage,
       pageSize,
+      showBalanceSheetModal,
+      showRevenueCashflowModal,
+      showProfitCashflowModal,
 
       isManageMode,
       showEditStockModal,
@@ -1457,7 +1493,9 @@ export default {
       saveEditReview,
 
       stockTrendsModalRef,
-      openTrendsModal
+      openTrendsModal,
+      showBalanceSheetModal,
+      handleCashFlowClick
     }
   }
 }
@@ -1469,30 +1507,45 @@ export default {
   margin: 0 auto;
   padding: 20px;
 }
+
 .research-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }
-.research-table th, .research-table td {
+
+.research-table th,
+.research-table td {
   border: 1px solid #7bc1cf;
   padding: 8px;
 }
+
 .research-table .label-td {
   font-weight: bold;
   text-align: center;
   color: white;
 }
+
 .research-table .desc-td {
   color: #333;
 }
-.research-table .bg-green { background-color: #1EBA5C; }
-.research-table .bg-blue { background-color: #0072C6; }
-.research-table .bg-red { background-color: #FF0000; }
+
+.research-table .bg-green {
+  background-color: #1EBA5C;
+}
+
+.research-table .bg-blue {
+  background-color: #0072C6;
+}
+
+.research-table .bg-red {
+  background-color: #FF0000;
+}
 
 .research-table .input-td {
   padding: 0;
 }
+
 .research-table .input-td :deep(.el-textarea__inner) {
   border: none !important;
   border-radius: 0;
@@ -1502,6 +1555,7 @@ export default {
   resize: none;
   min-height: 38px !important;
 }
+
 .research-table .input-td :deep(.el-textarea__inner:focus) {
   background-color: #f0f9eb;
 }
@@ -1509,6 +1563,7 @@ export default {
 .action-bar-card {
   margin-bottom: 20px;
 }
+
 .action-bar {
   display: flex;
   justify-content: space-between;

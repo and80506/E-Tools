@@ -17,3 +17,6 @@ scripts/user_data/*
 .env.*
 !.env.example
 !.env.ghpages
+
+# Static data
+public/data/

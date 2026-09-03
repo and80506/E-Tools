@@ -16,6 +16,22 @@ if (!fs.existsSync(publicDataDir)) {
 let pythonCmd = process.env.PYTHON_CMD || (os.platform() === 'win32' ? 'python' : 'python3');
 const env = Object.assign({}, process.env);
 
+function fetchStockData(scriptName, code) {
+  return new Promise((resolve, reject) => {
+    const scriptPath = path.join(__dirname, 'market_data', scriptName);
+    exec(`"${pythonCmd}" "${scriptPath}" ${code}`, { maxBuffer: 1024 * 1024 * 10, env }, (error, stdout, stderr) => {
+      if (error) return reject(error);
+      try {
+        const jsonStartIndex = stdout.indexOf('{');
+        const cleanStdout = jsonStartIndex !== -1 ? stdout.substring(jsonStartIndex) : stdout;
+        resolve(JSON.parse(cleanStdout));
+      } catch (e) {
+        reject(e);
+      }
+    });
+  });
+}
+
 function fetchIndex(code) {
   return new Promise((resolve, reject) => {
     console.log(`[build_static_data] Fetching data for ${code}...`);
@@ -68,6 +84,7 @@ async function buildAll() {
     const db = require('../server/db');
     const stocks = db.getAllStocks();
     const stockPythonScriptPath = path.join(__dirname, 'market_data/fetch_stock_akshare.py');
+    const bsPythonScriptPath = path.join(__dirname, 'market_data/fetch_stock_balance_sheet.py');
     
     for (const stock of stocks) {
       const code = stock.code;
@@ -95,6 +112,53 @@ async function buildAll() {
             }
           } catch (e) {
              console.error(`[build_static_data] Parse error for ${code}. Skipping...`);
+          }
+          resolve();
+        });
+      });
+
+      console.log(`[build_static_data] Fetching stock balance sheet data for ${code}...`);
+      await new Promise((resolve, reject) => {
+        exec(`"${pythonCmd}" "${bsPythonScriptPath}" ${code}`, { maxBuffer: 1024 * 1024 * 10, env }, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`[build_static_data] Error fetching balance sheet for ${code}. Skipping...`);
+            return resolve();
+          }
+          try {
+            const jsonStartIndex = stdout.indexOf('{');
+            const cleanStdout = jsonStartIndex !== -1 ? stdout.substring(jsonStartIndex) : stdout;
+            const result = JSON.parse(cleanStdout);
+            if (result.success) {
+              const outputPath = path.join(publicDataDir, `bs_${code}.json`);
+              fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
+              console.log(`[build_static_data] Saved ${outputPath}`);
+            }
+          } catch (e) {
+             console.error(`[build_static_data] Parse error for balance sheet ${code}. Skipping...`);
+          }
+          resolve();
+        });
+      });
+
+      console.log(`[build_static_data] Fetching stock revenue and cashflow data for ${code}...`);
+      const rcPythonScriptPath = path.join(__dirname, 'market_data/fetch_stock_revenue_cashflow.py');
+      await new Promise((resolve, reject) => {
+        exec(`"${pythonCmd}" "${rcPythonScriptPath}" ${code}`, { maxBuffer: 1024 * 1024 * 10, env }, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`[build_static_data] Error fetching revenue/cashflow for ${code}. Skipping...`);
+            return resolve();
+          }
+          try {
+            const jsonStartIndex = stdout.indexOf('{');
+            const cleanStdout = jsonStartIndex !== -1 ? stdout.substring(jsonStartIndex) : stdout;
+            const result = JSON.parse(cleanStdout);
+            if (result.success) {
+              const outputPath = path.join(publicDataDir, `rc_${code}.json`);
+              fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
+              console.log(`[build_static_data] Saved ${outputPath}`);
+            }
+          } catch (e) {
+             console.error(`[build_static_data] Parse error for revenue/cashflow ${code}. Skipping...`);
           }
           resolve();
         });
