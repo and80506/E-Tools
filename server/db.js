@@ -117,6 +117,20 @@ if (!useJsonFallback) {
     });
     insertMany(initialStocks);
   }
+
+  // 检查标签是否为空，如果为空则插入预置标签
+  const tagCountStmt = db.prepare('SELECT COUNT(*) as count FROM tags');
+  const { count: tagCount } = tagCountStmt.get();
+  if (tagCount === 0) {
+    const insertTagStmt = db.prepare('INSERT OR IGNORE INTO tags (id, name, color) VALUES (?, ?, ?)');
+    const insertManyTags = db.transaction(() => {
+      insertTagStmt.run(1, '持仓', '#ef4444');
+      insertTagStmt.run(2, '观察仓', '#eab308');
+      insertTagStmt.run(3, '红利', '#10b981');
+      insertTagStmt.run(4, '成长', '#3b82f6');
+    });
+    insertManyTags();
+  }
 } catch (err) {
   console.warn('[DB] SQLite 初始化失败，自动降级为本地 JSON 存储方案:', err.message);
   useJsonFallback = true;
@@ -137,6 +151,16 @@ if (useJsonFallback) {
       research_data: '{}'
     }));
     fs.writeFileSync(JSON_DB_PATH, JSON.stringify(defaultData, null, 2), 'utf-8');
+  }
+
+  if (!fs.existsSync(JSON_TAGS_PATH)) {
+    const defaultTags = [
+      { id: 1, name: '持仓', color: '#ef4444' },
+      { id: 2, name: '观察仓', color: '#eab308' },
+      { id: 3, name: '红利', color: '#10b981' },
+      { id: 4, name: '成长', color: '#3b82f6' }
+    ];
+    fs.writeFileSync(JSON_TAGS_PATH, JSON.stringify(defaultTags, null, 2), 'utf-8');
   }
 }
 
@@ -190,11 +214,42 @@ const dbService = {
   getAllStocks() {
     let stocks = [];
     if (!useJsonFallback) {
-      stocks = db.prepare('SELECT s.*, EXISTS(SELECT 1 FROM trade_records tr WHERE tr.code = s.code LIMIT 1) as has_trades FROM stocks s ORDER BY s.order_num ASC, s.id ASC').all();
+      stocks = db.prepare(`
+        SELECT s.*, 
+               EXISTS(SELECT 1 FROM trade_records tr WHERE tr.code = s.code LIMIT 1) as has_trades,
+               (
+                 SELECT MIN(
+                   CASE t.name 
+                     WHEN '持仓' THEN 1 
+                     WHEN '观察仓' THEN 2 
+                     WHEN '红利' THEN 3 
+                     WHEN '成长' THEN 4 
+                     ELSE 5 
+                   END
+                 )
+                 FROM stock_tags st 
+                 JOIN tags t ON st.tag_id = t.id 
+                 WHERE st.stock_id = s.id
+               ) as min_tag_order
+        FROM stocks s 
+        ORDER BY 
+          COALESCE(min_tag_order, 6) ASC, 
+          s.order_num ASC, 
+          s.id ASC
+      `).all();
       const relations = db.prepare(`
         SELECT st.stock_id, t.id, t.name, t.color 
         FROM stock_tags st 
         JOIN tags t ON st.tag_id = t.id
+        ORDER BY 
+          CASE t.name 
+            WHEN '持仓' THEN 1 
+            WHEN '观察仓' THEN 2 
+            WHEN '红利' THEN 3 
+            WHEN '成长' THEN 4 
+            ELSE 5 
+          END ASC, 
+          t.id ASC
       `).all();
       const tagsMap = {};
       relations.forEach(r => {
@@ -205,7 +260,7 @@ const dbService = {
         s.tags = tagsMap[s.id] || [];
       });
     } else {
-      stocks = readJsonStocks().sort((a, b) => (a.order_num || 0) - (b.order_num || 0) || a.id - b.id);
+      stocks = readJsonStocks();
       const tags = readJsonTags();
       const stockTags = readJsonStockTags();
       const tagsMap = {};
@@ -219,9 +274,25 @@ const dbService = {
       });
       const tradeRecords = readJsonTradeRecords();
       const tradedCodes = new Set(tradeRecords.map(tr => tr.code.toUpperCase()));
+      const predefinedOrder = { '持仓': 1, '观察仓': 2, '红利': 3, '成长': 4 };
+      
       stocks.forEach(s => {
-        s.tags = relationsMap[s.id] || [];
+        const sTags = relationsMap[s.id] || [];
+        sTags.sort((a, b) => {
+          const orderA = predefinedOrder[a.name] || 5;
+          const orderB = predefinedOrder[b.name] || 5;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.id - b.id;
+        });
+        s.tags = sTags;
         s.has_trades = tradedCodes.has(s.code.toUpperCase()) ? 1 : 0;
+        
+        s.min_tag_order = sTags.length > 0 ? (predefinedOrder[sTags[0].name] || 5) : 6;
+      });
+
+      stocks.sort((a, b) => {
+        if (a.min_tag_order !== b.min_tag_order) return a.min_tag_order - b.min_tag_order;
+        return (a.order_num || 0) - (b.order_num || 0) || a.id - b.id;
       });
     }
 
@@ -517,9 +588,28 @@ const dbService = {
   // ---------------- 标签管理 API ---------------- //
   getAllTags() {
     if (!useJsonFallback) {
-      return db.prepare('SELECT * FROM tags ORDER BY id ASC').all();
+      return db.prepare(`
+        SELECT * FROM tags 
+        ORDER BY 
+          CASE name 
+            WHEN '持仓' THEN 1 
+            WHEN '观察仓' THEN 2 
+            WHEN '红利' THEN 3 
+            WHEN '成长' THEN 4 
+            ELSE 5 
+          END ASC, 
+          id ASC
+      `).all();
     } else {
-      return readJsonTags();
+      const tags = readJsonTags();
+      const predefinedOrder = { '持仓': 1, '观察仓': 2, '红利': 3, '成长': 4 };
+      tags.sort((a, b) => {
+        const orderA = predefinedOrder[a.name] || 5;
+        const orderB = predefinedOrder[b.name] || 5;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.id - b.id;
+      });
+      return tags;
     }
   },
   

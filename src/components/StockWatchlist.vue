@@ -570,20 +570,20 @@
     <StockTrendsModal ref="stockTrendsModalRef" />
 
     <!-- 资产负债表模态框 -->
-    <StockBalanceSheetModal v-model="showBalanceSheetModal" :stock-code="currentResearchStock?.code"
-      :stock-name="currentResearchStock?.name" />
+    <StockBalanceSheetModal v-model="showBalanceSheetModal" :stock-code="currentResearchStock?.code || ''"
+      :stock-name="currentResearchStock?.name || ''" />
 
     <!-- 现金流模态框 -->
-    <StockRevenueCashflowModal v-model="showRevenueCashflowModal" :stock-code="currentResearchStock?.code"
-      :stock-name="currentResearchStock?.name" />
+    <StockRevenueCashflowModal v-model="showRevenueCashflowModal" :stock-code="currentResearchStock?.code || ''"
+      :stock-name="currentResearchStock?.name || ''" />
 
     <!-- ROE模态框 -->
-    <StockRoeModal v-model="showRoeModal" :stock-code="currentResearchStock?.code"
-      :stock-name="currentResearchStock?.name" />
+    <StockRoeModal v-model="showRoeModal" :stock-code="currentResearchStock?.code || ''"
+      :stock-name="currentResearchStock?.name || ''" />
 
     <!-- 净利润/现金流模态框 -->
-    <StockProfitCashflowModal v-model="showProfitCashflowModal" :stock-code="currentResearchStock?.code"
-      :stock-name="currentResearchStock?.name" />
+    <StockProfitCashflowModal v-model="showProfitCashflowModal" :stock-code="currentResearchStock?.code || ''"
+      :stock-name="currentResearchStock?.name || ''" />
 
     <!-- 竞对对比模态框 -->
     <StockCompetitorCompareModal v-model:visible="showCompetitorCompareModal" :base-stock="currentResearchStock"
