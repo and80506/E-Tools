@@ -66,6 +66,7 @@ router.get('/fundamentals', (req, res) => {
 });
 
 const bsCache = {};
+const roeCache = {};
 
 router.get('/balance_sheet', (req, res) => {
   const code = req.query.code;
@@ -180,4 +181,60 @@ router.get('/revenue_cashflow', (req, res) => {
     }
   });
 });
+
+router.get('/roe', (req, res) => {
+  const code = req.query.code;
+  if (!code) {
+    return res.status(400).json({ success: false, message: 'Stock code is required' });
+  }
+
+  const now = Date.now();
+  if (roeCache[code] && now - roeCache[code].timestamp < 1000 * 60 * 60) {
+    return res.json({ success: true, data: roeCache[code].data });
+  }
+
+  const scriptPath = path.join(__dirname, '../../scripts/market_data/fetch_stock_roe.py');
+  
+  let pythonCmd = process.env.PYTHON_CMD || (os.platform() === 'win32' ? 'python' : 'python3');
+  const env = Object.assign({}, process.env);
+  
+  exec(`"${pythonCmd}" "${scriptPath}" ${code}`, { maxBuffer: 1024 * 1024 * 10, env }, (error, stdout, stderr) => {
+    if (error) {
+      try {
+        const jsonStartIndex = stdout.indexOf('{');
+        if (jsonStartIndex !== -1) {
+          const result = JSON.parse(stdout.substring(jsonStartIndex));
+          if (result.message) {
+            console.error(`[Python 拦截] ${result.message}`);
+            return res.status(500).json({ success: false, message: result.message });
+          }
+        }
+      } catch (e) {}
+      
+      const realError = stderr || stdout || error.message;
+      console.error('\n[Python 运行崩溃]\n', realError);
+      return res.status(500).json({ success: false, message: 'ROE数据拉取异常，请查看终端报错' });
+    }
+    
+    try {
+      const jsonStartIndex = stdout.indexOf('{');
+      const cleanStdout = jsonStartIndex !== -1 ? stdout.substring(jsonStartIndex) : stdout;
+      
+      const result = JSON.parse(cleanStdout);
+      if (result.success) {
+        roeCache[code] = {
+          data: result.data,
+          timestamp: now
+        };
+        res.json({ success: true, data: result.data });
+      } else {
+        res.status(500).json({ success: false, message: result.message });
+      }
+    } catch (e) {
+      console.error('JSON Parse Error for Stock ROE:', e, stdout);
+      res.status(500).json({ success: false, message: 'Invalid data format from python script' });
+    }
+  });
+});
+
 module.exports = router;

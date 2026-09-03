@@ -1,7 +1,7 @@
 <template>
   <el-config-provider :locale="locale">
     <el-container class="app-layout">
-      <el-aside width="240px" class="sidebar">
+      <el-aside width="200px" class="sidebar">
         <div class="sidebar-header">
           <h1 class="logo">
             <span class="logo-icon">📊</span>
@@ -170,7 +170,7 @@ export default {
 /* 整个应用的基本布局 */
 .app-layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 200px 1fr;
   min-height: 100vh;
   background-color: var(--bg-primary);
 }
@@ -195,7 +195,7 @@ export default {
   border-left: none;
   display: flex;
   flex-direction: column;
-  padding: 30px 20px;
+  padding: 20px 10px;
   z-index: 10;
 }
 
@@ -322,8 +322,8 @@ export default {
 .main-content {
   display: flex;
   flex-direction: column;
-  padding: 24px;
-  gap: 24px;
+  padding: 12px;
+  gap: 16px;
   min-height: 100vh;
   overflow-y: auto;
 }
@@ -332,7 +332,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 10px 16px;
 }
 
 .view-title {
@@ -439,6 +439,22 @@ export default {
   background: rgba(0, 242, 254, 0.1);
   border: 1px solid rgba(0, 242, 254, 0.2);
   color: var(--accent-cyan);
+}
+
+.el-menu-item {
+  height: 40px !important;
+  line-height: 40px !important;
+  margin-bottom: 4px;
+  font-size: 13px !important;
+  border-radius: 8px !important;
+}
+
+.el-menu-item.is-active {
+  background: rgba(0, 242, 254, 0.1) !important;
+}
+
+.content-wrapper {
+  padding: 10px 15px;
 }
 
 .tool-icon.calculator {

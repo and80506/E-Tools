@@ -74,7 +74,7 @@
                 <el-button type="default">选择并导入 CSV 文件</el-button>
               </el-upload>
               <span v-if="csvFileName" style="margin-left: 10px; font-size: 13px; color: #67c23a;">已选: {{ csvFileName
-                }}</span>
+              }}</span>
             </div>
 
             <div>
@@ -93,8 +93,7 @@
         <el-table-column type="index" :index="indexMethod" label="序号" width="60" align="center" />
         <el-table-column prop="code" label="股票代码" width="100">
           <template #default="scope">
-            <el-link :href="getQuoteUrl(scope.row)" target="_blank" type="primary"
-              style="font-weight: 600;">
+            <el-link :href="getQuoteUrl(scope.row)" target="_blank" type="primary" style="font-weight: 600;">
               {{ scope.row.code }}
             </el-link>
           </template>
@@ -107,7 +106,8 @@
               <el-tag v-else-if="scope.row.asset_type === 'Index'" size="small" type="danger" effect="dark">指数</el-tag>
               <el-tag v-else-if="scope.row.asset_type === 'US_Stock'" size="small" type="info" effect="dark">美股</el-tag>
               <el-tag v-else-if="scope.row.asset_type === 'HK_Stock'" size="small" type="info" effect="dark">港股</el-tag>
-              <el-tag v-else-if="scope.row.asset_type === 'Fund'" size="small" type="warning" effect="dark">场外基金</el-tag>
+              <el-tag v-else-if="scope.row.asset_type === 'Fund'" size="small" type="warning"
+                effect="dark">场外基金</el-tag>
             </div>
           </template>
         </el-table-column>
@@ -126,15 +126,19 @@
           </template>
         </el-table-column>
 
-
-        <el-table-column label="深度分析" width="320" fixed="right">
+        <el-table-column label="深度分析" width="460" fixed="right">
           <template #default="scope">
-            <el-button size="small" type="primary" plain @click="openResearchModal(scope.row)">体检</el-button>
-            <el-button size="small" type="success" plain @click="calculateFCF(scope.row)"
-              :loading="scope.row.fcfLoading">FCF</el-button>
-            <el-button size="small" type="default" plain
-              @click="openTrendsModal(scope.row, 'mc_revenue')">市值/营收</el-button>
-            <el-button size="small" type="default" plain @click="openTrendsModal(scope.row, 'pe')">市盈率</el-button>
+            <el-button-group>
+              <el-button size="small" type="primary" plain @click="openResearchModal(scope.row)">体检</el-button>
+              <el-button size="small" type="success" plain @click="calculateFCF(scope.row)"
+                :loading="scope.row.fcfLoading">FCF</el-button>
+              <el-button size="small" type="success" plain @click="handleCashFlowClick(scope.row)">营收/现金</el-button>
+            </el-button-group>
+            <el-button-group style="margin-left: 10px;">
+              <el-button size="small" @click="openTrendsModal(scope.row, 'ps')">市值/营收</el-button>
+              <el-button size="small" @click="openTrendsModal(scope.row, 'pe')">市盈率</el-button>
+              <el-button size="small" @click="handleRoeClick(scope.row)">ROE</el-button>
+            </el-button-group>
           </template>
         </el-table-column>
 
@@ -330,7 +334,7 @@
           <strong>TTM 企业自由现金流 / 股权市值:</strong>
           <span style="float: right; color: #e60012; font-weight: bold; font-size: 18px;">{{
             fcfResult.fcfYield.toFixed(2)
-            }}%</span>
+          }}%</span>
         </p>
       </div>
       <template #footer>
@@ -546,6 +550,10 @@
     <StockRevenueCashflowModal v-model="showRevenueCashflowModal" :stock-code="currentResearchStock?.code"
       :stock-name="currentResearchStock?.name" />
 
+    <!-- ROE模态框 -->
+    <StockRoeModal v-model="showRoeModal" :stock-code="currentResearchStock?.code"
+      :stock-name="currentResearchStock?.name" />
+
     <!-- 净利润/现金流模态框 -->
     <StockProfitCashflowModal v-model="showProfitCashflowModal" :stock-code="currentResearchStock?.code"
       :stock-name="currentResearchStock?.name" />
@@ -557,6 +565,7 @@ import StockTrendsModal from './StockTrendsModal.vue'
 import StockBalanceSheetModal from './StockBalanceSheetModal.vue'
 import StockRevenueCashflowModal from './StockRevenueCashflowModal.vue'
 import StockProfitCashflowModal from './StockProfitCashflowModal.vue'
+import StockRoeModal from './StockRoeModal.vue'
 import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -570,6 +579,7 @@ export default {
     StockBalanceSheetModal,
     StockRevenueCashflowModal,
     StockProfitCashflowModal,
+    StockRoeModal,
     MagicStick
   },
   setup() {
@@ -587,6 +597,7 @@ export default {
     const showBalanceSheetModal = ref(false)
     const showRevenueCashflowModal = ref(false)
     const showProfitCashflowModal = ref(false)
+    const showRoeModal = ref(false)
 
     const isManageMode = ref(false)
     const showEditStockModal = ref(false)
@@ -1179,6 +1190,25 @@ export default {
       }
     }
 
+    const handleCashFlowClick = (row) => {
+      // 保持拦截逻辑
+      if (['ETF', 'US_Stock', 'HK_Stock', 'Fund'].includes(row.asset_type)) {
+        ElMessage.warning('暂不支持对美股、港股或基金进行现金流分析' + (['ETF', 'Fund'].includes(row.asset_type) ? '，请添加其对应的指数代码' : ''))
+        return
+      }
+      currentResearchStock.value = row
+      showRevenueCashflowModal.value = true
+    }
+
+    const handleRoeClick = (row) => {
+      if (['ETF', 'US_Stock', 'HK_Stock', 'Fund'].includes(row.asset_type)) {
+        ElMessage.warning('暂不支持对美股、港股或基金进行ROE分析' + (['ETF', 'Fund'].includes(row.asset_type) ? '，请添加其对应的指数代码' : ''))
+        return
+      }
+      currentResearchStock.value = row
+      showRoeModal.value = true
+    }
+
     // -------------- 交易复盘 ---------------- //
     const loadTrades = async () => {
       try {
@@ -1383,10 +1413,6 @@ export default {
       }
     }
 
-    const handleCashFlowClick = () => {
-      showRevenueCashflowModal.value = true
-    }
-
     onMounted(async () => {
       loadData()
       loadTags()
@@ -1408,6 +1434,7 @@ export default {
       showBalanceSheetModal,
       showRevenueCashflowModal,
       showProfitCashflowModal,
+      showRoeModal,
 
       isManageMode,
       showEditStockModal,
@@ -1422,6 +1449,8 @@ export default {
       indexMethod,
       handleSizeChange,
       handleCurrentChange,
+      handleCashFlowClick,
+      handleRoeClick,
       formatDate,
       exportText,
       importText,
@@ -1514,7 +1543,7 @@ export default {
 .watchlist-container {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 0;
 }
 
 .research-table {

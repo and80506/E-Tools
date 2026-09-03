@@ -21,7 +21,7 @@
       </div>
     </el-card>
 
-    <el-row :gutter="20" style="flex: 1; align-items: stretch; margin: 0; min-height: 500px;">
+    <el-row :gutter="20" style="flex: 1; align-items: stretch; min-height: 500px;">
       <!-- 左侧：全局复盘 -->
       <el-col :span="14" style="display: flex; flex-direction: column;">
         <el-card shadow="never" style="flex: 1; display: flex; flex-direction: column;" :body-style="{ display: 'flex', flexDirection: 'column', flex: 1, padding: '20px' }">

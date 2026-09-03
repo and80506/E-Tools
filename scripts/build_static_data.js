@@ -163,6 +163,30 @@ async function buildAll() {
           resolve();
         });
       });
+
+      console.log(`[build_static_data] Fetching stock ROE data for ${code}...`);
+      const roePythonScriptPath = path.join(__dirname, 'market_data/fetch_stock_roe.py');
+      await new Promise((resolve, reject) => {
+        exec(`"${pythonCmd}" "${roePythonScriptPath}" ${code}`, { maxBuffer: 1024 * 1024 * 10, env }, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`[build_static_data] Error fetching ROE for ${code}. Skipping...`);
+            return resolve();
+          }
+          try {
+            const jsonStartIndex = stdout.indexOf('{');
+            const cleanStdout = jsonStartIndex !== -1 ? stdout.substring(jsonStartIndex) : stdout;
+            const result = JSON.parse(cleanStdout);
+            if (result.success) {
+              const outputPath = path.join(publicDataDir, `roe_${code}.json`);
+              fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
+              console.log(`[build_static_data] Saved ${outputPath}`);
+            }
+          } catch (e) {
+             console.error(`[build_static_data] Parse error for ROE ${code}. Skipping...`);
+          }
+          resolve();
+        });
+      });
     }
   } catch (e) {
     console.error(`[build_static_data] Error fetching stock data:`, e);

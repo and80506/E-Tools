@@ -5,7 +5,8 @@
         <el-radio-button label="000300">沪深300</el-radio-button>
         <el-radio-button label="000905">中证500</el-radio-button>
         <el-radio-button label="000852">中证1000</el-radio-button>
-        <el-radio-button v-if="customIndexCode && !['000300', '000905', '000852'].includes(customIndexCode)" :label="customIndexCode">{{ customIndexName }}</el-radio-button>
+        <el-radio-button v-if="customIndexCode && !['000300', '000905', '000852'].includes(customIndexCode)"
+          :label="customIndexCode">{{ customIndexName }}</el-radio-button>
       </el-radio-group>
     </div>
 
@@ -18,10 +19,13 @@
               <template #content>
                 <div style="max-width: 320px; line-height: 1.6; font-size: 13px;">
                   本页面所有财务数据均源自理杏仁（Lixinger）开放平台。<br><br>
-                  由于官方接口未直接提供指数的绝对总营收，系统通过拉取真实的“市销率 (PS)”和“总市值 (MC)”，利用基本财务公式（总营收 = 总市值 / 市销率）精准反演出 100% 真实的指数总营收绝对值，确保全过程零估算、零模拟数据。
+                  由于官方接口未直接提供指数的绝对总营收，系统通过拉取真实的“市销率 (PS)”和“总市值 (MC)”，利用基本财务公式（总营收 = 总市值 / 市销率）精准反演出 100%
+                  真实的指数总营收绝对值，确保全过程零估算、零模拟数据。
                 </div>
               </template>
-              <el-icon color="#909399" style="cursor: pointer; font-size: 16px;"><InfoFilled /></el-icon>
+              <el-icon color="#909399" style="cursor: pointer; font-size: 16px;">
+                <InfoFilled />
+              </el-icon>
             </el-tooltip>
           </div>
         </div>
@@ -74,17 +78,17 @@ export default {
       }
       return map[currentIndex.value] || '大盘'
     })
-    
+
     const chart1Ref = ref(null)
     const chart2Ref = ref(null)
-    
+
     let chart1 = null
     let chart2 = null
 
     const initChart1 = (data) => {
       if (!chart1Ref.value) return
       chart1 = echarts.init(chart1Ref.value)
-      
+
       const dates = data.map(item => {
         const d = item.trade_date
         return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`
@@ -160,23 +164,23 @@ export default {
     const initChart2 = (data) => {
       if (!chart2Ref.value) return
       chart2 = echarts.init(chart2Ref.value)
-      
+
       const dates = data.map(item => {
         const d = item.trade_date
         return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`
       })
       const peData = data.map(item => parseFloat(item.pe_ttm) || parseFloat(item.pe) || 0)
-      
+
       // Calculate mean, high (e.g. mean + 1 std), low (e.g. mean - 1 std)
       const validPe = peData.filter(v => v > 0)
       let sum = 0;
       validPe.forEach(v => sum += v);
       const mean = sum / validPe.length;
-      
+
       let varianceSum = 0;
       validPe.forEach(v => varianceSum += Math.pow(v - mean, 2));
       const stdDev = Math.sqrt(varianceSum / validPe.length);
-      
+
       const highLine = (mean + stdDev).toFixed(2);
       const meanLine = mean.toFixed(2);
       const lowLine = (mean - stdDev).toFixed(2);
@@ -269,10 +273,10 @@ export default {
         const fetchUrl = import.meta.env.VITE_APP_ENV === 'ghpages'
           ? `${import.meta.env.BASE_URL}data/market_${currentIndex.value}.json`
           : `/api/market/index?code=${currentIndex.value}`
-          
+
         const response = await fetch(fetchUrl)
         const result = await response.json()
-        
+
         if (result.success) {
           nextTick(() => {
             initChart1(result.data)
@@ -300,7 +304,7 @@ export default {
         customIndexName.value = route.query.indexName || route.query.indexCode
         currentIndex.value = route.query.indexCode
       }
-      
+
       fetchData()
       window.addEventListener('resize', handleResize)
     })
@@ -337,17 +341,20 @@ export default {
 
 <style scoped>
 .market-trend-container {
-  padding: 20px;
+  padding: 0;
 }
+
 .filter-bar {
   margin-bottom: 20px;
   text-align: center;
 }
+
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
+
 .chart-wrapper {
   position: relative;
 }
