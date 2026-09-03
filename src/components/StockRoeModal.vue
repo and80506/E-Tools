@@ -4,7 +4,23 @@
     <template #header>
       <div class="modal-header">
         <span class="stock-name">{{ stockName }}</span>
-        <span class="modal-title">净资产收益率趋势</span>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <span class="modal-title">净资产收益率趋势</span>
+          <el-tooltip effect="dark" placement="right">
+            <template #content>
+              <div style="line-height: 1.6; color: #ffffff; max-width: 380px;">
+                <strong style="color: #409EFF">口径说明：</strong><br/>
+                本系统采用 <strong>ROE (TTM) 滚动年化口径</strong> 进行平滑处理，以消除财报季节性波动，使任意季度的盈利能力都能在同一基准线上对比。<br/>
+                <br/>
+                <strong style="color: #409EFF">与常规平台数据差异：</strong><br/>
+                东方财富等网页默认展示“当期累计ROE”，一季报等非年报节点数值通常较低。本系统中：<br/>
+                ROE (TTM) = 归母净利润(TTM) / 归属于母公司股东权益 * 100%<br/>
+                <em>注：归母净利润(TTM) 即最近 12 个月（滚动4个季度）的累计净利润。</em>
+              </div>
+            </template>
+            <el-icon style="cursor: pointer; color: #909399; font-size: 16px;"><InfoFilled /></el-icon>
+          </el-tooltip>
+        </div>
       </div>
     </template>
     
@@ -21,6 +37,7 @@
 import { ref, nextTick, shallowRef } from 'vue'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
+import { InfoFilled } from '@element-plus/icons-vue'
 
 const props = defineProps({
   modelValue: Boolean,

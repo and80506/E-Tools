@@ -269,12 +269,38 @@
       </template>
     </el-dialog>
 
+    <!-- 竞对管理模态框 -->
+    <el-dialog v-model="showCompetitorModal" title="管理竞对公司" width="500px" append-to-body>
+      <div v-if="currentResearchData">
+        <div v-for="(comp, idx) in (currentResearchData.competitors || [])" :key="idx" style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
+          <el-input v-model="comp.code" placeholder="股票代码" style="width: 150px;"></el-input>
+          <el-input v-model="comp.name" placeholder="公司名称" style="flex: 1;"></el-input>
+          <el-button type="danger" icon="Delete" circle @click="removeCompetitor(idx)"></el-button>
+        </div>
+        <el-button type="dashed" style="width: 100%; margin-top: 10px;" @click="addCompetitor">+ 添加竞对公司</el-button>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showCompetitorModal = false">关闭</el-button>
+          <el-button type="primary" @click="saveCompetitors">保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
     <!-- 深度研报（体检）模态框 -->
     <el-dialog v-model="showResearchModal" width="800px" destroy-on-close>
       <template #header>
         <div style="display: flex; align-items: center; justify-content: space-between; padding-right: 20px;">
-          <span style="font-size: 18px; font-weight: bold; color: #303133;">
-            个股深度体检 - {{ currentResearchStock?.name }} ({{ currentResearchStock?.code }})
+          <span style="font-size: 18px; font-weight: bold; color: #303133; display: flex; align-items: center; gap: 15px;">
+            <span>个股深度体检 - {{ currentResearchStock?.name }} ({{ currentResearchStock?.code }})</span>
+            
+            <el-button v-if="currentResearchData?.competitors && currentResearchData.competitors.length > 0" 
+                       size="small" type="danger" plain @click="showCompetitorModal = true">
+              竞对：{{ currentResearchData.competitors.map(c => c.name).join('、') }}
+            </el-button>
+            <el-button v-else size="small" type="danger" plain @click="showCompetitorModal = true">
+              + 竞对公司
+            </el-button>
           </span>
           <el-tooltip content="生成 AI 辅助分析提示词并复制" placement="top">
             <el-button type="primary" link @click="copyAIPrompt">
@@ -290,6 +316,7 @@
           <el-button type="primary" plain @click="showBalanceSheetModal = true">资产负债表</el-button>
           <el-button type="primary" plain @click="showRevenueCashflowModal = true">现金流/营收</el-button>
           <el-button type="primary" plain @click="showProfitCashflowModal = true">净利润/现金流</el-button>
+          <el-button type="warning" plain @click="openCompetitorCompareModal">竞对比较</el-button>
         </div>
         <table class="research-table" cellspacing="0" cellpadding="0">
           <thead>
@@ -557,6 +584,10 @@
     <!-- 净利润/现金流模态框 -->
     <StockProfitCashflowModal v-model="showProfitCashflowModal" :stock-code="currentResearchStock?.code"
       :stock-name="currentResearchStock?.name" />
+
+    <!-- 竞对对比模态框 -->
+    <StockCompetitorCompareModal v-model:visible="showCompetitorCompareModal" :base-stock="currentResearchStock"
+      :competitors="currentResearchData?.competitors || []" />
   </div>
 </template>
 
@@ -566,6 +597,7 @@ import StockBalanceSheetModal from './StockBalanceSheetModal.vue'
 import StockRevenueCashflowModal from './StockRevenueCashflowModal.vue'
 import StockProfitCashflowModal from './StockProfitCashflowModal.vue'
 import StockRoeModal from './StockRoeModal.vue'
+import StockCompetitorCompareModal from './StockCompetitorCompareModal.vue'
 import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -580,6 +612,7 @@ export default {
     StockRevenueCashflowModal,
     StockProfitCashflowModal,
     StockRoeModal,
+    StockCompetitorCompareModal,
     MagicStick
   },
   setup() {
@@ -733,6 +766,35 @@ export default {
       } catch (err) {
         ElMessage.error(err.message || '保存体检数据失败')
       }
+    }
+
+    const showCompetitorModal = ref(false)
+    const showCompetitorCompareModal = ref(false)
+    
+    const openCompetitorCompareModal = () => {
+      if (!currentResearchData.value?.competitors || currentResearchData.value.competitors.length === 0) {
+        ElMessage.warning('请先在上方点击【+ 竞对公司】添加至少一家竞对后，再查看对比数据')
+        return
+      }
+      showCompetitorCompareModal.value = true
+    }
+    
+    const addCompetitor = () => {
+      if (!currentResearchData.value.competitors) {
+        currentResearchData.value.competitors = []
+      }
+      currentResearchData.value.competitors.push({ code: '', name: '' })
+    }
+
+    const removeCompetitor = (idx) => {
+      if (currentResearchData.value.competitors) {
+        currentResearchData.value.competitors.splice(idx, 1)
+      }
+    }
+
+    const saveCompetitors = async () => {
+      await saveResearchData()
+      showCompetitorModal.value = false
     }
 
     const copyAIPrompt = async () => {
@@ -1485,6 +1547,13 @@ export default {
       openResearchModal,
       saveResearchData,
       copyAIPrompt,
+
+      showCompetitorModal,
+      showCompetitorCompareModal,
+      openCompetitorCompareModal,
+      addCompetitor,
+      removeCompetitor,
+      saveCompetitors,
 
       currentFcfStock,
       showFcfModal,

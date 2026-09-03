@@ -76,7 +76,9 @@ def fetch_data():
             ttm_results.append({
                 "date": row['REPORT_DATE'].strftime('%Y-%m-%d'),
                 "report_name": row.get('REPORT_DATE_NAME', ''),
-                "company_roe": round(roe_ttm, 2)
+                "company_roe": round(roe_ttm, 2),
+                "profit_ttm": round(profit_ttm / 100000000, 2),
+                "net_asset": round(row['NET_ASSET'] / 100000000, 2)
             })
 
     if not ttm_results:

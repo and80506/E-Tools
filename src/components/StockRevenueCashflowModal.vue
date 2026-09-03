@@ -2,9 +2,25 @@
   <el-dialog v-model="visible" width="80%" destroy-on-close @opened="initChart">
     <template #header>
       <div style="display: flex; justify-content: space-between; align-items: center; padding-right: 20px;">
-        <span style="font-size: 18px; font-weight: bold; color: #303133;">
-          <span style="color: #409EFF; margin-right: 4px;">{{ stockName }}</span>现金流/营业收入趋势
-        </span>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <span style="font-size: 18px; font-weight: bold; color: #303133;">
+            <span style="color: #409EFF; margin-right: 4px;">{{ stockName }}</span>现金流/营业收入趋势
+          </span>
+          <el-tooltip effect="dark" placement="right">
+            <template #content>
+              <div style="line-height: 1.6; color: #ffffff; max-width: 380px;">
+                <strong style="color: #409EFF">口径说明：</strong><br/>
+                本图表数据均采用 <strong>TTM（滚动十二个月）</strong> 口径进行平滑处理，以消除财报带来的季节性波动。<br/>
+                <br/>
+                <strong style="color: #409EFF">指标解读：</strong><br/>
+                <strong>营业总收入(TTM)：</strong> 最近 12 个月公司营业总收入的总和。<br/>
+                <strong>销售商品提供劳务收到的现金(TTM)：</strong> 最近 12 个月日常经营中实际收到的现金流总和。<br/>
+                <em>注：这反映了公司营收的“真金白银”转化率，健康的营收结构，其收到的现金应当与营业收入大致匹配甚至更高。</em>
+              </div>
+            </template>
+            <el-icon style="cursor: pointer; color: #909399; font-size: 16px;"><InfoFilled /></el-icon>
+          </el-tooltip>
+        </div>
       </div>
     </template>
 
@@ -25,7 +41,7 @@
 <script setup>
 import { ref, watch, computed, nextTick, onBeforeUnmount } from 'vue'
 import * as echarts from 'echarts'
-import { Warning } from '@element-plus/icons-vue'
+import { Warning, InfoFilled } from '@element-plus/icons-vue'
 
 const props = defineProps({
   modelValue: {

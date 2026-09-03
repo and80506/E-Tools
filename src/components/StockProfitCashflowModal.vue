@@ -2,9 +2,25 @@
   <el-dialog v-model="visible" width="80%" destroy-on-close @opened="initChart">
     <template #header>
       <div style="display: flex; justify-content: space-between; align-items: center; padding-right: 20px;">
-        <span style="font-size: 18px; font-weight: bold; color: #303133;">
-          <span style="color: #409EFF; margin-right: 4px;">{{ stockName }}</span>净利润与主业现金流净额趋势
-        </span>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <span style="font-size: 18px; font-weight: bold; color: #303133;">
+            <span style="color: #409EFF; margin-right: 4px;">{{ stockName }}</span>净利润与主业现金流净额趋势
+          </span>
+          <el-tooltip effect="dark" placement="right">
+            <template #content>
+              <div style="line-height: 1.6; color: #ffffff; max-width: 380px;">
+                <strong style="color: #409EFF">口径说明：</strong><br/>
+                本图表数据均采用 <strong>TTM（滚动十二个月）</strong> 口径进行平滑处理，以消除财报带来的季节性波动。<br/>
+                <br/>
+                <strong style="color: #409EFF">指标解读：</strong><br/>
+                <strong>净利润(TTM)：</strong> 最近 12 个月归母净利润的总和。<br/>
+                <strong>主业现金流净额(TTM)：</strong> 最近 12 个月经营活动产生的现金流量净额总和。<br/>
+                <em>注：健康的利润结构，其经营现金流净额应当长期大于或等于净利润（即“含金量”高）。</em>
+              </div>
+            </template>
+            <el-icon style="cursor: pointer; color: #909399; font-size: 16px;"><InfoFilled /></el-icon>
+          </el-tooltip>
+        </div>
       </div>
     </template>
 
@@ -25,7 +41,7 @@
 <script setup>
 import { ref, watch, computed, nextTick, onBeforeUnmount } from 'vue'
 import * as echarts from 'echarts'
-import { Warning } from '@element-plus/icons-vue'
+import { Warning, InfoFilled } from '@element-plus/icons-vue'
 
 const props = defineProps({
   modelValue: {
