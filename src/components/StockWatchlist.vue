@@ -93,7 +93,7 @@
         <el-table-column type="index" :index="indexMethod" label="序号" width="60" align="center" />
         <el-table-column prop="code" label="股票代码" width="100">
           <template #default="scope">
-            <el-link :href="`https://quote.eastmoney.com/${scope.row.code}.html`" target="_blank" type="primary"
+            <el-link :href="getQuoteUrl(scope.row)" target="_blank" type="primary"
               style="font-weight: 600;">
               {{ scope.row.code }}
             </el-link>
@@ -106,6 +106,8 @@
               <el-tag v-if="scope.row.asset_type === 'ETF'" size="small" type="warning" effect="dark">ETF</el-tag>
               <el-tag v-else-if="scope.row.asset_type === 'Index'" size="small" type="danger" effect="dark">指数</el-tag>
               <el-tag v-else-if="scope.row.asset_type === 'US_Stock'" size="small" type="info" effect="dark">美股</el-tag>
+              <el-tag v-else-if="scope.row.asset_type === 'HK_Stock'" size="small" type="info" effect="dark">港股</el-tag>
+              <el-tag v-else-if="scope.row.asset_type === 'Fund'" size="small" type="warning" effect="dark">场外基金</el-tag>
             </div>
           </template>
         </el-table-column>
@@ -617,14 +619,20 @@ export default {
 
     const router = useRouter()
 
-    const openTrendsModal = (row, type) => {
-      if (row.asset_type === 'ETF') {
-        ElMessage.warning('ETF 暂不支持估值趋势分析，请添加其对应的指数代码')
-        return
+    const getQuoteUrl = (row) => {
+      if (row.asset_type === 'US_Stock' || row.asset_type === 'HK_Stock') {
+        const cleanCode = row.code.replace(/\.hk$/i, '')
+        return `https://xueqiu.com/S/${cleanCode.toUpperCase()}`
       }
+      if (row.asset_type === 'Fund') {
+        return `http://fund.eastmoney.com/${row.code}.html`
+      }
+      return `https://quote.eastmoney.com/${row.code}.html`
+    }
 
-      if (row.asset_type === 'US_Stock') {
-        ElMessage.warning('暂不支持美股的估值趋势分析')
+    const openTrendsModal = (row, type) => {
+      if (['ETF', 'US_Stock', 'HK_Stock', 'Fund'].includes(row.asset_type)) {
+        ElMessage.warning('暂不支持对美股、港股或基金进行估值趋势分析' + (['ETF', 'Fund'].includes(row.asset_type) ? '，请添加其对应的指数代码' : ''))
         return
       }
 
@@ -686,8 +694,8 @@ export default {
 
     const openResearchModal = (row) => {
       // 复用 DB 中的 asset_type 字段判断
-      if (row.asset_type === 'ETF' || row.asset_type === 'US_Stock' || row.asset_type === 'Index') {
-        ElMessage.warning('个股深度体检功能当前仅支持 A 股个股，暂不支持美股、指数或 ETF。')
+      if (row.asset_type === 'ETF' || row.asset_type === 'US_Stock' || row.asset_type === 'Index' || row.asset_type === 'HK_Stock' || row.asset_type === 'Fund') {
+        ElMessage.warning('个股深度体检功能当前仅支持 A 股个股，暂不支持美股、港股、指数或基金。')
         return
       }
 
@@ -1385,6 +1393,7 @@ export default {
     })
 
     return {
+      getQuoteUrl,
       stocks,
       searchQuery,
       selectedIds,

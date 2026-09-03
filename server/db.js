@@ -229,29 +229,66 @@ const dbService = {
       let assetType = 'Stock';
       const rawCode = String(s.code ?? '').trim();
       const c = rawCode.toLowerCase();
-      const isAllDigit = /^\d{6}$/.test(rawCode); // A股标的严格6位数字
+      const pureCode = rawCode.replace(/\.hk$/i, '');
 
-      // 美股：不是全数字，包含字母，允许 . 数字符号；排除纯数字脏数据
-      if (!isAllDigit && /^[a-z0-9.]+$/.test(c) && /[a-z]/.test(c)) {
-        assetType = 'US_Stock';
+      const isAllDigit = /^\d{6}$/.test(rawCode);
+
+      // ========== 港股 ==========
+      const isHKCode = /^\d{4,5}$/.test(pureCode);
+      const hasHKSuffix = /\.hk$/i.test(rawCode);
+      if (hasHKSuffix || isHKCode) {
+          assetType = 'HK_Stock';
       }
-      // A股 ETF / LOF 6位数字且以特定号段开头
+      // ========== 美股 ==========
+      else if (!isAllDigit && /^[a-z0-9.]+$/.test(c) && /[a-z]/.test(c)) {
+          assetType = 'US_Stock';
+      }
+      // ========== A股场内 ETF / LOF ==========
       else if (isAllDigit && /^(51|15|56|58|501|16)/.test(rawCode)) {
-        assetType = 'ETF';
+          assetType = 'ETF';
       }
-      // 指数：399 / 899 指数代码 或者名字带指数（ETF已经在上分支拦截）
+      // ========== 指数 ==========
       else if (isAllDigit && (/^(399|899)/.test(rawCode) || (s.name && s.name.includes('指数')))) {
-        assetType = 'Index';
-      }
-      // 000xxxx 上证系宽基指数与深市个股区分，规避数字关键词误命中
-      else if (/^000\d{3}$/.test(rawCode)) {
-        const indexKeywords = ['上证', '深证', '中证', '沪深', '科创', '红利'];
-        const indexFullName = ['沪深300', '中证500', '中证1000', '上证50'];
-        const isKeywordHit = s.name && indexKeywords.some(kw => s.name.includes(kw));
-        const isFullNameHit = s.name && indexFullName.some(full => s.name.includes(full));
-        if (isKeywordHit || isFullNameHit) {
           assetType = 'Index';
-        }
+      }
+      // ========== 000开头 宽基指数特殊处理 ==========
+      else if (/^000\d{3}$/.test(rawCode)) {
+          const indexKeywords = ['上证', '深证', '中证', '沪深', '科创', '红利'];
+          const indexFullName = ['沪深300', '中证500', '中证1000', '上证50'];
+          const isKeywordHit = s.name && indexKeywords.some(kw => s.name.includes(kw));
+          const isFullNameHit = s.name && indexFullName.some(full => s.name.includes(full));
+          if (isKeywordHit || isFullNameHit) {
+              assetType = 'Index';
+          }
+      }
+      // ========== 新增：场外基金判断 ==========
+      else if (isAllDigit && s.name) {
+          const name = s.name.trim();
+
+          // 1. 基金强特征词（精准，避免误判股票名称）
+          const fundKeywords = [
+              '债券', '纯债', '短债', '可转债', '信用债', '利率债',
+              '混合', '灵活配置', '偏股', '偏债', '平衡',
+              '货币', '现金',
+              'ETF联接', '联接基金',
+              'QDII', 'FOF', 'REITs', 'REIT',
+              '指数增强', '量化对冲',
+              '定开', '定期开放',
+              '养老', '目标日期', '目标风险',
+              '理财', '股票型', '指数型'
+          ];
+          const hasFundKeyword = fundKeywords.some(kw => name.includes(kw));
+
+          // 2. 名称含「ETF」但代码不在场内ETF号段 → 场外ETF联接基金
+          const isOTCEtf = name.includes('ETF') && !/^(51|15|56|58)/.test(rawCode);
+
+          // 3. 份额后缀判断：名称以 A/B/C/D/E/H/I/R 结尾（基金份额标识）
+          //    且名称长度>3，排除股票简称里偶然的大写字母
+          const hasShareSuffix = /[A-Z]$/.test(name) && name.length > 3;
+
+          if (hasFundKeyword || isOTCEtf || hasShareSuffix) {
+              assetType = 'Fund';
+          }
       }
 
       s.asset_type = assetType;
