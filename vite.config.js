@@ -1,7 +1,7 @@
 module.exports = {
   port: 8080,
   define: {
-    __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false'
+    __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false
   },
   proxy: {
     '/api': {
