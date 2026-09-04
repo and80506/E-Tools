@@ -10,6 +10,11 @@ warnings.filterwarnings('ignore')
 
 def fetch_data():
     stock_code = sys.argv[1] if len(sys.argv) > 1 else "600519"
+    years = int(sys.argv[2]) if len(sys.argv) > 2 else 8
+    
+    # Calculate how many quarters we need (buffer extra 2 quarters for TTM calculation)
+    quarters = (years + 1) * 4
+    
     # Format symbol for akshare
     if stock_code.startswith('6'):
         symbol = f"sh{stock_code}"
@@ -47,9 +52,9 @@ def fetch_data():
         # Merge on REPORT_DATE
         df_merged = pd.merge(df_profit, df_cash, on='REPORT_DATE', how='inner')
         
-        # Sort descending to get the latest ones first, take top 50 periods
+        # Sort descending to get the latest ones first, take top N periods
         df_merged = df_merged.sort_values(by='REPORT_DATE', ascending=False)
-        df_merged = df_merged.head(50)
+        df_merged = df_merged.head(quarters + 10) # 10 periods buffer for TTM
         
         # Sort ascending (from old to new) for the chart
         df_merged = df_merged.sort_values('REPORT_DATE', ascending=True).reset_index(drop=True)
@@ -97,8 +102,8 @@ def fetch_data():
         df_merged['net_profit'] = ttm_netprofit
         df_merged = df_merged.dropna()
         
-        # Take the last 30 quarters
-        df_merged = df_merged.tail(30)
+        # Take the requested number of quarters
+        df_merged = df_merged.tail(quarters)
         
         result_data = []
         for index, row in df_merged.iterrows():

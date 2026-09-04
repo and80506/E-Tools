@@ -9,8 +9,9 @@ warnings.filterwarnings('ignore')
 
 def fetch_data():
     stock_code = sys.argv[1] if len(sys.argv) > 1 else "600519"
+    years = int(sys.argv[2]) if len(sys.argv) > 2 else 8
     
-    eight_years_ago = (datetime.datetime.now() - datetime.timedelta(days=8*365)).date()
+    start_date = (datetime.datetime.now() - datetime.timedelta(days=years*365 + 30)).date()
     
     try:
         # Fetch historical valuation data from EastMoney
@@ -20,9 +21,9 @@ def fetch_data():
             print(json.dumps({"success": False, "message": "该代码不受支持或无相关历史估值数据"}))
             sys.exit(0)
             
-        # Filter for the last 8 years
+        # Filter for the requested years
         df['数据日期'] = pd.to_datetime(df['数据日期']).dt.date
-        df = df[df['数据日期'] >= eight_years_ago]
+        df = df[df['数据日期'] >= start_date]
         
         # Sort ascending by date
         df = df.sort_values('数据日期')

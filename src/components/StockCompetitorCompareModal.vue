@@ -159,13 +159,16 @@
   </el-dialog>
 
   <!-- Zoom Dialog -->
-  <el-dialog v-model="zoomVisible" width="1000px" destroy-on-close @opened="onZoomOpened" :show-close="true" append-to-body>
+  <el-dialog v-model="zoomVisible" width="1000px" destroy-on-close @opened="onZoomOpened" :show-close="true"
+    append-to-body>
     <template #header>
-      <div class="zoom-header" style="display: flex; align-items: center; justify-content: space-between; padding-right: 30px;">
+      <div class="zoom-header"
+        style="display: flex; align-items: center; justify-content: space-between; padding-right: 30px;">
         <span class="el-dialog__title">{{ zoomTitle }}</span>
         <div class="zoom-actions">
           <el-button link :icon="ArrowLeft" @click="prevZoom" :disabled="currentZoomIndex === 0">上一个</el-button>
-          <el-button link :icon="ArrowRight" @click="nextZoom" :disabled="currentZoomIndex === 5" style="margin-left: 20px;">下一个</el-button>
+          <el-button link :icon="ArrowRight" @click="nextZoom" :disabled="currentZoomIndex === 5"
+            style="margin-left: 20px;">下一个</el-button>
         </div>
       </div>
     </template>
@@ -211,6 +214,14 @@ export default {
 
     let charts = []
 
+    // Configurable display years
+    const displayYears = 8
+    const getCutoffTime = () => {
+      const d = new Date()
+      d.setFullYear(d.getFullYear() - displayYears)
+      return d.getTime()
+    }
+
     const onOpened = async () => {
       loading.value = true
       // cleanup previous charts
@@ -231,24 +242,26 @@ export default {
 
     const fetchAllData = async () => {
       const allStocks = [props.baseStock, ...props.competitors]
-      const fetchStockData = async (stock) => {
-        const [fundRes, rcRes, roeRes] = await Promise.all([
-          fetch(`/api/stock/fundamentals?code=${stock.code}`).then(r => r.json()),
-          fetch(`/api/stock/revenue_cashflow?code=${stock.code}`).then(r => r.json()),
-          fetch(`/api/stock/roe?code=${stock.code}`).then(r => r.json())
-        ])
-
-        if (fundRes.message && !fundRes.success) throw new Error(fundRes.message)
-
+      const codes = allStocks.map(s => s.code).join(',')
+      
+      const res = await fetch(`/api/stock/compare_data?codes=${codes}&years=${displayYears}`)
+      const json = await res.json()
+      
+      if (!json.success) {
+        throw new Error(json.message || '获取聚合数据失败')
+      }
+      
+      const combinedData = json.data
+      
+      return allStocks.map(stock => {
+        const sData = combinedData[stock.code] || { fundamentals: [], revenueCashflow: [], roe: [] }
         return {
           name: stock.name,
-          fundamentals: fundRes.success ? fundRes.data : [],
-          revenueCashflow: rcRes.success ? rcRes.data : [],
-          roe: roeRes.success ? roeRes.data : []
+          fundamentals: sData.fundamentals || [],
+          revenueCashflow: sData.revenueCashflow || [],
+          roe: sData.roe || []
         }
-      }
-
-      return await Promise.all(allStocks.map(s => fetchStockData(s)))
+      })
     }
 
     const renderAllCharts = (results) => {
@@ -274,9 +287,16 @@ export default {
       const chart = echarts.init(el)
       charts.push(chart)
 
+      const cutoffTime = getCutoffTime()
+
       const series = results.map(stockData => {
         const data = stockData[sourceKey]
-          .filter(d => d[valueKey] !== null && d[valueKey] !== undefined && !isNaN(d[valueKey]))
+          .filter(d => {
+            if (d[valueKey] === null || d[valueKey] === undefined || isNaN(d[valueKey])) return false
+            const ds = String(d.trade_date)
+            const dateStr = ds.length === 8 ? `${ds.substring(0, 4)}-${ds.substring(4, 6)}-${ds.substring(6, 8)}` : ds
+            return new Date(dateStr).getTime() >= cutoffTime
+          })
           .map(d => {
             const ds = String(d.trade_date)
             const dateStr = ds.length === 8 ? `${ds.substring(0, 4)}-${ds.substring(4, 6)}-${ds.substring(6, 8)}` : ds
@@ -315,9 +335,14 @@ export default {
       const chart = echarts.init(el)
       charts.push(chart)
 
+      const cutoffTime = getCutoffTime()
+
       const series = results.map(stockData => {
         const data = stockData[sourceKey]
-          .filter(d => d[valueKey] !== null && d[valueKey] !== undefined && !isNaN(d[valueKey]))
+          .filter(d => {
+            if (d[valueKey] === null || d[valueKey] === undefined || isNaN(d[valueKey])) return false
+            return new Date(d.date).getTime() >= cutoffTime
+          })
           .map(d => {
             const val = extraOptions.transform ? extraOptions.transform(d[valueKey]) : d[valueKey]
             return [d.date, val]
@@ -437,7 +462,7 @@ export default {
       roeChartRef,
       netAssetChartRef,
       onOpened,
-      
+
       chartData,
       zoomVisible,
       currentZoomIndex,
