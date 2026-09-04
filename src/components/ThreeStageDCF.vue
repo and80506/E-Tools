@@ -3,7 +3,8 @@
     <!-- Introduction Section -->
     <div class="glass-card intro-card">
       <div class="intro-header">
-        <h2 class="section-title">估值推导过程：分段自由现金流贴现模型 (三阶段 DCF, 3-Stage Discounted Cash Flow)，理论上可以说是“估值公式的尽头，估值模型皇冠上的明珠”。</h2>
+        <h2 class="section-title">估值推导过程：分段自由现金流贴现模型 (三阶段 DCF, 3-Stage Discounted Cash
+          Flow)，理论上可以说是“估值公式的尽头，估值模型皇冠上的明珠”。</h2>
         <span class="badge">DCF Model</span>
       </div>
       <p class="intro-desc">
@@ -13,7 +14,7 @@
       <div class="formula-box">
         <h4 style="margin-bottom: 12px; font-weight: 600;">三阶段 DCF 模型估值推导——</h4>
         <p>设定：第一年自由现金流（FCF） = 10 亿元；折现率/WACC = 8.0%；股票总股本 = 100 亿股（方便折算每股价值）。</p>
-        
+
         <div style="margin-top: 16px; padding: 16px; background: rgba(0,0,0,0.2); border-radius: 8px;">
           <div style="display: flex; gap: 20px; font-family: monospace; font-size: 13px;">
             <div style="flex: 1; text-align: center;">
@@ -24,7 +25,8 @@
             <div style="display: flex; align-items: center; font-size: 18px; color: rgba(255,255,255,0.3);">---></div>
             <div style="flex: 1; text-align: center;">
               <div>第二阶段（过渡期）</div>
-              <div style="font-weight: 700; font-size: 16px; margin: 4px 0;">第 {{ stage1Years + 1 }} ~ {{ totalExplicitYears }} 年</div>
+              <div style="font-weight: 700; font-size: 16px; margin: 4px 0;">第 {{ stage1Years + 1 }} ~ {{
+                totalExplicitYears }} 年</div>
               <div style="color: #42d392;">【增长率按年递减】</div>
             </div>
             <div style="display: flex; align-items: center; font-size: 18px; color: rgba(255,255,255,0.3);">---></div>
@@ -35,7 +37,7 @@
             </div>
           </div>
         </div>
-        
+
         <ul class="rule-bullets" style="margin-top: 20px;">
           <li>
             <strong>第一阶段：高速增长期（第 1 ~ {{ stage1Years }} 年）</strong>
@@ -56,7 +58,7 @@
     <!-- Interactive Calculator -->
     <div class="glass-card calc-card">
       <h3 class="card-title">Three-Stage DCF Valuation Calculator</h3>
-      
+
       <!-- Legend -->
       <div class="chart-legend">
         <span class="legend-item"><span class="dot phase1"></span>Phase 1</span>
@@ -74,7 +76,8 @@
             <span class="bar-label" v-if="phase2Ratio > 5">PV2</span>
           </div>
           <div class="bar-segment terminal" :style="{ width: terminalRatio + '%' }">
-            <span class="bar-label">Terminal {{ calculatedResult.terminalPV.toFixed(1) }} ({{ terminalRatio.toFixed(1) }}%)</span>
+            <span class="bar-label">Terminal {{ calculatedResult.terminalPV.toFixed(1) }} ({{ terminalRatio.toFixed(1)
+              }}%)</span>
           </div>
         </div>
         <div class="chart-axis">
@@ -110,11 +113,17 @@
           </tbody>
           <tfoot>
             <tr>
-              <td colspan="4" class="t-right">Total PV of CF</td>
+              <td colspan="4" class="t-right">
+                现金流现值合计
+                <span style="font-size: 12px; color: #909399; margin-left: 8px;">(Total PV of CF)</span>
+              </td>
               <td>{{ calculatedResult.totalPVofCF.toFixed(2) }}</td>
             </tr>
             <tr>
-              <td colspan="4" class="t-right">Terminal PV</td>
+              <td colspan="4" class="t-right">
+                终值现值
+                <span style="font-size: 12px; color: #909399; margin-left: 8px;">(Terminal PV)</span>
+              </td>
               <td>{{ calculatedResult.terminalPV.toFixed(2) }}</td>
             </tr>
           </tfoot>
@@ -124,22 +133,26 @@
       <!-- Total Result -->
       <div class="total-result-box">
         <div class="res-item">
-          <div class="res-lbl">Total PV of CF (1-{{ totalExplicitYears }} Years)</div>
+          <div class="res-lbl">现金流现值合计 (1-{{ totalExplicitYears }} Years) <span
+              style="font-size: 12px; color: #909399; margin-left: 8px;">(Total PV of CF)</span></div>
           <div class="res-val">{{ calculatedResult.totalPVofCF.toFixed(2) }}</div>
         </div>
         <div class="res-operator">+</div>
         <div class="res-item">
-          <div class="res-lbl">Terminal PV</div>
+          <div class="res-lbl">终值现值 <span style="font-size: 12px; color: #909399; margin-left: 8px;">(Terminal
+              PV)</span></div>
           <div class="res-val">{{ calculatedResult.terminalPV.toFixed(2) }}</div>
         </div>
         <div class="res-operator">=</div>
         <div class="res-item highlight">
-          <div class="res-lbl">Total Firm Value</div>
+          <div class="res-lbl">公司总价值 <span style="font-size: 12px; color: #909399; margin-left: 8px;">(Total Firm
+              Value)</span></div>
           <div class="res-val">{{ calculatedResult.totalValue.toFixed(2) }}</div>
         </div>
         <div class="res-operator" style="margin: 0 10px; color: rgba(255,255,255,0.2);">|</div>
         <div class="res-item highlight" style="color: #10b981;">
-          <div class="res-lbl">Implied P/E</div>
+          <div class="res-lbl">隐含市盈率 <span style="font-size: 12px; color: #909399; margin-left: 8px;">(Implied
+              P/E)</span></div>
           <div class="res-val">{{ calculatedResult.impliedPE.toFixed(1) }}x</div>
         </div>
       </div>
@@ -151,8 +164,8 @@
             <label>Initial Profit/CF</label>
             <span>首年现金流基础</span>
           </div>
-          <input type="range" min="1" max="100" step="1" v-model.number="initialCF" class="slider" />
-          <input type="number" v-model.number="initialCF" class="val-input" />
+          <input type="range" min="1" max="2000" step="10" v-model.number="initialCF" class="slider type-amount" />
+          <input type="number" v-model.number="initialCF" class="val-input type-amount" />
         </div>
 
         <div class="control-row">
@@ -160,8 +173,8 @@
             <label>Stage 1 Growth (%)</label>
             <span>第一阶段高速增长率</span>
           </div>
-          <input type="range" min="0" max="100" step="1" v-model.number="stage1Growth" class="slider" />
-          <input type="number" v-model.number="stage1Growth" class="val-input" />
+          <input type="range" min="0" max="100" step="1" v-model.number="stage1Growth" class="slider type-growth" />
+          <input type="number" v-model.number="stage1Growth" class="val-input type-growth" />
         </div>
 
         <div class="control-row">
@@ -169,17 +182,17 @@
             <label>Stage 1 Years</label>
             <span>第一阶段：高速增长期 (1~20年)</span>
           </div>
-          <input type="range" min="1" max="20" step="1" v-model.number="stage1Years" class="slider" />
-          <input type="number" v-model.number="stage1Years" class="val-input" />
+          <input type="range" min="1" max="20" step="1" v-model.number="stage1Years" class="slider type-years" />
+          <input type="number" v-model.number="stage1Years" class="val-input type-years" />
         </div>
 
         <div class="control-row">
           <div class="control-info">
             <label>Stage 2 Years</label>
-            <span>第二阶段：过渡/衰退期 (1~20年)</span>
+            <span>第二阶段：过渡/衰退期 (0~20年)</span>
           </div>
-          <input type="range" min="1" max="20" step="1" v-model.number="stage2Years" class="slider" />
-          <input type="number" v-model.number="stage2Years" class="val-input" />
+          <input type="range" min="0" max="20" step="1" v-model.number="stage2Years" class="slider type-years" />
+          <input type="number" v-model.number="stage2Years" class="val-input type-years" />
         </div>
 
         <div class="control-row">
@@ -187,8 +200,8 @@
             <label>Terminal Growth (%)</label>
             <span>永续阶段增长率 (低于WACC)</span>
           </div>
-          <input type="range" min="0" max="10" step="0.5" v-model.number="terminalGrowth" class="slider" />
-          <input type="number" v-model.number="terminalGrowth" class="val-input" />
+          <input type="range" min="0" max="10" step="0.5" v-model.number="terminalGrowth" class="slider type-growth" />
+          <input type="number" v-model.number="terminalGrowth" class="val-input type-growth" />
         </div>
 
         <div class="control-row">
@@ -196,8 +209,8 @@
             <label>WACC (%)</label>
             <span>折现率/要求回报率</span>
           </div>
-          <input type="range" min="5" max="20" step="0.5" v-model.number="wacc" class="slider" />
-          <input type="number" v-model.number="wacc" class="val-input" />
+          <input type="range" min="5" max="20" step="0.5" v-model.number="wacc" class="slider type-growth" />
+          <input type="number" v-model.number="wacc" class="val-input type-growth" />
         </div>
       </div>
     </div>
@@ -225,7 +238,7 @@ export default {
       const gn = terminalGrowth.value / 100
       const r = wacc.value / 100
       const y1 = stage1Years.value
-      
+
       const tYears = totalExplicitYears.value
       const transitionYears = tYears - y1
       const yearlyDecrement = transitionYears > 0 ? (g1 - gn) / transitionYears : 0
@@ -256,7 +269,7 @@ export default {
 
         currentProfit = currentProfit * (1 + currentGrowth)
         const pv = currentProfit / Math.pow(1 + r, year)
-        
+
         totalPVofCF += pv
         if (year <= y1) {
           stage1PV += pv
@@ -282,7 +295,7 @@ export default {
         terminalValue = year11Profit / (r - gn)
       }
       const terminalPV = terminalValue / Math.pow(1 + r, tYears)
-      
+
       const totalValue = totalPVofCF + terminalPV
       const impliedPE = initialCF.value > 0 ? totalValue / initialCF.value : 0
 
@@ -453,9 +466,18 @@ export default {
   height: 10px;
   border-radius: 2px;
 }
-.dot.phase1 { background: #3b82f6; }
-.dot.phase2 { background: #10b981; }
-.dot.terminal { background: #f59e0b; }
+
+.dot.phase1 {
+  background: #3b82f6;
+}
+
+.dot.phase2 {
+  background: #10b981;
+}
+
+.dot.terminal {
+  background: #f59e0b;
+}
 
 .stacked-chart-container {
   margin-top: 10px;
@@ -466,7 +488,7 @@ export default {
   height: 48px;
   border-radius: 4px;
   overflow: hidden;
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .bar-segment {
@@ -481,9 +503,17 @@ export default {
   white-space: nowrap;
 }
 
-.bar-segment.phase1 { background: #3b82f6; }
-.bar-segment.phase2 { background: #10b981; }
-.bar-segment.terminal { background: #f59e0b; }
+.bar-segment.phase1 {
+  background: #3b82f6;
+}
+
+.bar-segment.phase2 {
+  background: #10b981;
+}
+
+.bar-segment.terminal {
+  background: #f59e0b;
+}
 
 .chart-axis {
   display: flex;
@@ -515,28 +545,35 @@ export default {
   text-align: right;
 }
 
-.dcf-table th, .dcf-table td {
+.dcf-table th,
+.dcf-table td {
   padding: 10px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .dcf-table th {
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.3);
   color: var(--text-secondary);
   font-weight: 500;
   text-align: right;
 }
 
-.dcf-table th:first-child, .dcf-table td:first-child {
+.dcf-table th:first-child,
+.dcf-table td:first-child {
   text-align: left;
 }
 
-.row-phase1 { background: rgba(59, 130, 246, 0.1); }
-.row-phase2 { background: rgba(16, 185, 129, 0.1); }
+.row-phase1 {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.row-phase2 {
+  background: rgba(16, 185, 129, 0.1);
+}
 
 .dcf-table tfoot td {
   font-weight: 600;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .t-right {
@@ -549,7 +586,7 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 20px;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   padding: 24px;
   border-radius: 12px;
   border: 1px solid var(--border-glass);
@@ -599,7 +636,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 20px;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   padding: 12px 20px;
   border-radius: 8px;
 }
@@ -627,7 +664,7 @@ export default {
 
 .val-input {
   width: 80px;
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-glass);
   color: #fff;
   padding: 6px 12px;
@@ -639,6 +676,31 @@ export default {
 
 .val-input:focus {
   outline: none;
-  border-color: var(--accent-cyan);
+  border-color: var(--border-glass);
+}
+
+/* Category specific styles */
+.slider.type-amount {
+  accent-color: #f59e0b;
+}
+
+.val-input.type-amount:focus {
+  border-color: #f59e0b;
+}
+
+.slider.type-growth {
+  accent-color: #06b6d4;
+}
+
+.val-input.type-growth:focus {
+  border-color: #06b6d4;
+}
+
+.slider.type-years {
+  accent-color: #8b5cf6;
+}
+
+.val-input.type-years:focus {
+  border-color: #8b5cf6;
 }
 </style>
