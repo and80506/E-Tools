@@ -4,6 +4,11 @@
     <div v-loading="loading" element-loading-text="正在聚合多维数据，由于并发拉取较多接口，请耐心等待..." style="min-height: 400px;">
       <div v-if="!loading" class="charts-grid">
         <div class="chart-container" style="position: relative;">
+          <div style="position: absolute; top: 10px; right: 10px; z-index: 10;">
+            <el-icon style="cursor: pointer; color: #909399; font-size: 18px;" @click="openZoom(0)">
+              <ZoomIn />
+            </el-icon>
+          </div>
           <div style="position: absolute; top: 30px; left: 50%; transform: translateX(75px); z-index: 10;">
             <el-tooltip effect="dark" placement="right">
               <template #content>
@@ -24,6 +29,11 @@
           <div ref="mvChartRef" class="chart-box"></div>
         </div>
         <div class="chart-container" style="position: relative;">
+          <div style="position: absolute; top: 10px; right: 10px; z-index: 10;">
+            <el-icon style="cursor: pointer; color: #909399; font-size: 18px;" @click="openZoom(1)">
+              <ZoomIn />
+            </el-icon>
+          </div>
           <div style="position: absolute; top: 30px; left: 50%; transform: translateX(75px); z-index: 10;">
             <el-tooltip effect="dark" placement="right">
               <template #content>
@@ -44,6 +54,11 @@
           <div ref="revenueChartRef" class="chart-box"></div>
         </div>
         <div class="chart-container" style="position: relative;">
+          <div style="position: absolute; top: 10px; right: 10px; z-index: 10;">
+            <el-icon style="cursor: pointer; color: #909399; font-size: 18px;" @click="openZoom(2)">
+              <ZoomIn />
+            </el-icon>
+          </div>
           <div style="position: absolute; top: 30px; left: 50%; transform: translateX(75px); z-index: 10;">
             <el-tooltip effect="dark" placement="right">
               <template #content>
@@ -64,6 +79,11 @@
           <div ref="profitChartRef" class="chart-box"></div>
         </div>
         <div class="chart-container" style="position: relative;">
+          <div style="position: absolute; top: 10px; right: 10px; z-index: 10;">
+            <el-icon style="cursor: pointer; color: #909399; font-size: 18px;" @click="openZoom(3)">
+              <ZoomIn />
+            </el-icon>
+          </div>
           <div style="position: absolute; top: 30px; left: 50%; transform: translateX(95px); z-index: 10;">
             <el-tooltip effect="dark" placement="right">
               <template #content>
@@ -84,6 +104,11 @@
           <div ref="peChartRef" class="chart-box"></div>
         </div>
         <div class="chart-container" style="position: relative;">
+          <div style="position: absolute; top: 10px; right: 10px; z-index: 10;">
+            <el-icon style="cursor: pointer; color: #909399; font-size: 18px;" @click="openZoom(4)">
+              <ZoomIn />
+            </el-icon>
+          </div>
           <div style="position: absolute; top: 30px; left: 50%; transform: translateX(50px); z-index: 10;">
             <el-tooltip effect="dark" placement="right">
               <template #content>
@@ -105,6 +130,11 @@
           <div ref="roeChartRef" class="chart-box"></div>
         </div>
         <div class="chart-container" style="position: relative;">
+          <div style="position: absolute; top: 10px; right: 10px; z-index: 10;">
+            <el-icon style="cursor: pointer; color: #909399; font-size: 18px;" @click="openZoom(5)">
+              <ZoomIn />
+            </el-icon>
+          </div>
           <div style="position: absolute; top: 30px; left: 50%; transform: translateX(95px); z-index: 10;">
             <el-tooltip effect="dark" placement="left">
               <template #content>
@@ -127,18 +157,33 @@
       </div>
     </div>
   </el-dialog>
+
+  <!-- Zoom Dialog -->
+  <el-dialog v-model="zoomVisible" width="1000px" destroy-on-close @opened="onZoomOpened" :show-close="true" append-to-body>
+    <template #header>
+      <div class="zoom-header" style="display: flex; align-items: center; justify-content: space-between; padding-right: 30px;">
+        <span class="el-dialog__title">{{ zoomTitle }}</span>
+        <div class="zoom-actions">
+          <el-button link :icon="ArrowLeft" @click="prevZoom" :disabled="currentZoomIndex === 0">上一个</el-button>
+          <el-button link :icon="ArrowRight" @click="nextZoom" :disabled="currentZoomIndex === 5" style="margin-left: 20px;">下一个</el-button>
+        </div>
+      </div>
+    </template>
+    <div ref="zoomChartRef" style="width: 100%; height: 600px;"></div>
+  </el-dialog>
 </template>
 
 <script>
-import { ref, nextTick, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onUnmounted } from 'vue'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
-import { InfoFilled } from '@element-plus/icons-vue'
+import { InfoFilled, ZoomIn, ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 
 export default {
   name: 'StockCompetitorCompareModal',
   components: {
-    InfoFilled
+    InfoFilled,
+    ZoomIn
   },
   props: {
     visible: Boolean,
@@ -158,6 +203,12 @@ export default {
     const roeChartRef = ref(null)
     const netAssetChartRef = ref(null)
 
+    const chartData = ref([])
+    const zoomVisible = ref(false)
+    const currentZoomIndex = ref(0)
+    const zoomChartRef = ref(null)
+    let zoomChartInstance = null
+
     let charts = []
 
     const onOpened = async () => {
@@ -168,6 +219,7 @@ export default {
 
       try {
         const results = await fetchAllData()
+        chartData.value = results
         loading.value = false
         await nextTick()
         renderAllCharts(results)
@@ -218,7 +270,7 @@ export default {
     }
 
     const renderDailyChart = (el, title, results, sourceKey, valueKey, extraOptions = {}) => {
-      if (!el) return
+      if (!el) return null
       const chart = echarts.init(el)
       charts.push(chart)
 
@@ -259,7 +311,7 @@ export default {
     }
 
     const renderQuarterlyChart = (el, title, results, sourceKey, valueKey, extraOptions = {}) => {
-      if (!el) return
+      if (!el) return null
       const chart = echarts.init(el)
       charts.push(chart)
 
@@ -296,10 +348,84 @@ export default {
         series: series
       }
       chart.setOption(option)
+      return chart
+    }
+
+    const zoomTitle = computed(() => {
+      const titles = [
+        '市值趋势对比图 (亿元)',
+        '总营收对比图 (亿元)',
+        '净利润对比图 (亿元)',
+        '市盈率对比图 (PE-TTM)',
+        'ROE对比图',
+        '归母净资产对比图 (亿元)'
+      ]
+      return titles[currentZoomIndex.value] || '图表放大'
+    })
+
+    const openZoom = (index) => {
+      currentZoomIndex.value = index
+      zoomVisible.value = true
+    }
+
+    const onZoomOpened = () => {
+      renderZoomChart()
+    }
+
+    const renderZoomChart = () => {
+      if (zoomChartInstance) {
+        zoomChartInstance.dispose()
+        zoomChartInstance = null
+      }
+      if (!zoomChartRef.value) return
+
+      const results = chartData.value
+      const dateFormatOptions = { xAxis: { type: 'time', axisLabel: { color: '#909399', formatter: '{yyyy}-{MM}-{dd}', rotate: 45, hideOverlap: true } } }
+
+      switch (currentZoomIndex.value) {
+        case 0:
+          zoomChartInstance = renderDailyChart(zoomChartRef.value, '', results, 'fundamentals', 'total_mv', { transform: v => v / 10000, decimals: 0 })
+          break;
+        case 1:
+          zoomChartInstance = renderQuarterlyChart(zoomChartRef.value, '', results, 'revenueCashflow', 'revenue', { ...dateFormatOptions, decimals: 0 })
+          break;
+        case 2:
+          zoomChartInstance = renderQuarterlyChart(zoomChartRef.value, '', results, 'roe', 'profit_ttm', { ...dateFormatOptions, decimals: 0 })
+          break;
+        case 3:
+          zoomChartInstance = renderDailyChart(zoomChartRef.value, '', results, 'fundamentals', 'pe_ttm', { decimals: 2 })
+          break;
+        case 4:
+          zoomChartInstance = renderQuarterlyChart(zoomChartRef.value, '', results, 'roe', 'company_roe', {
+            ...dateFormatOptions,
+            transform: v => v / 100,
+            decimals: 2,
+            yAxis: { type: 'value', scale: true, interval: 0.1, splitLine: { lineStyle: { color: '#ebeef5' } }, axisLabel: { color: '#909399' } }
+          })
+          break;
+        case 5:
+          zoomChartInstance = renderQuarterlyChart(zoomChartRef.value, '', results, 'roe', 'net_asset', { ...dateFormatOptions, decimals: 0 })
+          break;
+      }
+    }
+
+    const prevZoom = () => {
+      if (currentZoomIndex.value > 0) {
+        currentZoomIndex.value--
+        renderZoomChart()
+      }
+    }
+
+    const nextZoom = () => {
+      if (currentZoomIndex.value < 5) {
+        currentZoomIndex.value++
+        renderZoomChart()
+      }
     }
 
     onUnmounted(() => {
       charts.forEach(c => c.dispose())
+      if (zoomChartInstance) zoomChartInstance.dispose()
     })
 
     return {
@@ -310,7 +436,19 @@ export default {
       peChartRef,
       roeChartRef,
       netAssetChartRef,
-      onOpened
+      onOpened,
+      
+      chartData,
+      zoomVisible,
+      currentZoomIndex,
+      zoomChartRef,
+      zoomTitle,
+      openZoom,
+      onZoomOpened,
+      prevZoom,
+      nextZoom,
+      ArrowLeft,
+      ArrowRight
     }
   }
 }
